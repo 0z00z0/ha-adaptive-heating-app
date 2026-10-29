@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AdaptiveHeating.Planner/AdaptiveHeating.Planner.csproj" />
+    <Project Path="src/AdaptiveHeating.Core/AdaptiveHeating.Core.csproj" />
+    <Project Path="src/AdaptiveHeating.Page/AdaptiveHeating.Page.csproj" />
+    <Project Path="src/AdaptiveHeating.AddOn/AdaptiveHeating.AddOn.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AdaptiveHeating.Planner.Tests/AdaptiveHeating.Planner.Tests.csproj" />
+    <Project Path="tests/AdaptiveHeating.Page.Tests/AdaptiveHeating.Page.Tests.csproj" />
+  </Folder>
+</Solution>

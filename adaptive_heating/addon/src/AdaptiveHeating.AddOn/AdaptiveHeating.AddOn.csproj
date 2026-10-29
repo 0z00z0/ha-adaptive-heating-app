@@ -1,0 +1,60 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+	<PropertyGroup>
+		<RootNamespace>AdaptiveHeating.AddOn</RootNamespace>
+		<Description>The add-on: it serves the settings page on the one port Home Assistant's ingress reaches inside the container, and carries who is signed in as an ordinary principal.</Description>
+		<GenerateDocumentationFile>false</GenerateDocumentationFile>
+		<!-- Architecture-neutral on purpose: the publish is taken off the box and the container adds a thin
+		     layer on a runtime base pulled for the box's own processor. -->
+		<InvariantGlobalization>false</InvariantGlobalization>
+		<UserSecretsId>adaptive-heating-addon</UserSecretsId>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\AdaptiveHeating.Page\AdaptiveHeating.Page.csproj" />
+		<ProjectReference Include="..\AdaptiveHeating.Core\AdaptiveHeating.Core.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- Copied from Adaptive Lighting's NetDaemon binding: the add-on's log. -->
+		<Compile Include="..\FromAdaptiveLighting\AdaptiveLighting.NetDaemon\**\*.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- The file under the settings and the calls to the thermostats are the add-on's own and stay internal. -->
+		<InternalsVisibleTo Include="AdaptiveHeating.Page.Tests" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!--
+			_framework/blazor.web.js lives in this package, not in the shared framework and not in the SDK. Without
+			it every page server-renders once and no circuit ever opens, so nothing on the page responds: a dead
+			UI that reads as a broken page rather than a missing script.
+		-->
+		<PackageReference Include="Microsoft.AspNetCore.App.Internal.Assets" Version="10.0.9" />
+
+		<!--
+			The connection to Home Assistant: its handshake, its reconnection, its subscription and the read of
+			every entity. Pinned exactly, at the number AdaptiveLighting pins and the newest published. Neither
+			NetDaemon.Runtime nor NetDaemon.AppModel is referenced, so nothing here has to match a version a house
+			pins: the add-on is its own process and talks to Home Assistant directly.
+		-->
+		<PackageReference Include="NetDaemon.Client" Version="26.36.0" />
+
+		<!--
+			The entity model over that connection: the state cache, the five registries and the typed entities.
+			Pinned at the same number as the client, which is also the number AdaptiveLighting pins. It brings
+			NetDaemon.Client itself, so the two versions have to agree.
+		-->
+		<PackageReference Include="NetDaemon.HassModel" Version="26.36.0" />
+
+		<!--
+			The durable copy of the log. Serilog rather than the logging abstractions, because the point is the output
+			template and the rolling file sink: the Supervisor's own buffer holds only the newest lines and two
+			restarts overwrite it. Pinned at the number AdaptiveLighting pins, since the two copies of this code are
+			kept in step by hand.
+		-->
+		<PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
+	</ItemGroup>
+
+</Project>

@@ -1,0 +1,676 @@
+/*
+	Lamplight's own stylesheet, served at _content/AdaptiveLighting.Lamplight/lamplight.css. Hand-written with no
+	external link: the UI runs on a LAN that may have no internet.
+	Each page package appends one delimited block, headed by a banner comment naming the package.
+*/
+
+/* ==== T. Themes ==== */
+/* One rule per theme, each setting every token this file reads: surfaces, text, accent, state colours,
+   the lamp ramp, shape and the whole type scale. No rule depends on another's order, and no
+   prefers-color-scheme block: lamplight-theme.js resolves the device and paints data-theme itself, always,
+   before this stylesheet's first rule is even parsed by a repaint. Warm charcoal's selector also matches the
+   bare :root, so a page whose script did not run still paints instead of falling through to nothing. */
+:root, :root[data-theme="warm-charcoal"] {
+	color-scheme: dark;
+	--bg: #141210; --surface: #1e1b18; --surface-2: #29251f; --inset: #0e0c0a; --line: #3f3931; --line-soft: #2e2a24; --card-line: transparent;
+	--ink: #f3ede4; --ink-2: #c3b8a8; --ink-3: #9d9282;
+	--accent: #8cc4dc; --accent-ink: #0b1d26; --focus: #8cc4dc; --mark: rgba(140, 196, 220, 0.16);
+	--auto: #ffb070; --auto-bg: #3a2716; --on-ink: #1a1206;
+	--hand: #c9aefc; --hand-bg: #2f2640;
+	--ok: #9dd49a; --ok-bg: #1f2e1d; --on-ok: #141210;
+	--off: #9d9282; --off-bg: #0e0c0a;
+	--warn: #f6d25c; --warn-bg: #372e12; --bad: #ff8a78; --bad-bg: #3e1d18; --on-state: #141210;
+	--k2200: #ffa04a; --k2700: #ffb46b; --k3000: #ffc187; --k3200: #ffc98f; --k4000: #ffe0bd; --k4500: #ffe9d0;
+	--lamp-max: 0.34; --lamp-reach: 68%; --lamp-edge: transparent; --on-lamp: #2a1c0c; --lit-ink-2: #f3ede4;
+	--room-off: #0e0c0a; --room-off-ink: #9d9282;
+	--shadow-pop: 0 12px 36px rgba(0, 0, 0, 0.55);
+	--t-xs: 12.5px; --t-sm: 14px; --t-md: 16px; --t-lg: 23px; --t-xl: 34px; --t-xxl: 54px; --lh: 1.5;
+	--ls-dis: -0.012em; --ls-dis-s: -0.008em; --ls-big: -0.028em;
+	--r: 12px; --r-big: 20px; --r-pill: 999px;
+	--w-body: 400; --w-med: 500; --w-semi: 600; --w-strong: 650; --w-bold: 700; --w-black: 800;
+	--now: #e3a0cf; --lane: #1a1714;
+	--kelvin-weight: 100%; --kelvin-shade: transparent;
+	--daylight-night: #1d2136; --daylight-twilight: #3a4876; --daylight-day: #a3804a; --daylight-halo: rgba(14, 12, 10, 0.72);
+	/* A soft serif over a warm humanist sans: the theme's whole claim is that nothing reads cold. */
+	--font-head: "Fraunces", "Iowan Old Style", Georgia, serif;
+	--font-body: "Figtree", "Segoe UI", system-ui, sans-serif;
+	--font-num: "IBM Plex Mono", Consolas, monospace;
+}
+/* Plum dusk: aubergine ground, orchid accent. Manual stays blue, so it cannot be read as the accent. */
+:root[data-theme="plum-dusk"] {
+	color-scheme: dark;
+	--bg: #17101d; --surface: #211729; --surface-2: #2b2036; --inset: #100a15; --line: #443353; --line-soft: #322542; --card-line: transparent;
+	--ink: #f2ecf6; --ink-2: #c8b9d4; --ink-3: #a294b0;
+	--accent: #d9a7ff; --accent-ink: #26123a; --focus: #d9a7ff; --mark: rgba(217, 167, 255, 0.16);
+	--auto: #ffb46b; --auto-bg: #3a2a1a; --on-ink: #1a1206;
+	--hand: #8fc4ff; --hand-bg: #1d2c3f;
+	--ok: #7fd9a8; --ok-bg: #1b3226; --on-ok: #17101d;
+	--off: #a294b0; --off-bg: #100a15;
+	--warn: #ffd36b; --warn-bg: #3b3119; --bad: #ff8a86; --bad-bg: #3e1f2b; --on-state: #17101d;
+	--k2200: #ffa04a; --k2700: #ffb46b; --k3000: #ffc187; --k3200: #ffc98f; --k4000: #ffe0bd; --k4500: #ffe9d0;
+	--lamp-max: 0.34; --lamp-reach: 68%; --lamp-edge: transparent; --on-lamp: #2a1c0c; --lit-ink-2: #f2ecf6;
+	--room-off: #100a15; --room-off-ink: #a294b0;
+	--shadow-pop: 0 12px 36px rgba(0, 0, 0, 0.55);
+	--t-xs: 12.5px; --t-sm: 14px; --t-md: 16px; --t-lg: 23px; --t-xl: 33px; --t-xxl: 50px; --lh: 1.5;
+	--ls-dis: -0.008em; --ls-dis-s: -0.005em; --ls-big: -0.025em;
+	--r: 12px; --r-big: 20px; --r-pill: 999px;
+	--w-body: 400; --w-med: 500; --w-semi: 600; --w-strong: 650; --w-bold: 700; --w-black: 800;
+	--now: #ff9ec7; --lane: #1c1423;
+	--kelvin-weight: 100%; --kelvin-shade: transparent;
+	--daylight-night: #1d2136; --daylight-twilight: #3a4876; --daylight-day: #a3804a; --daylight-halo: rgba(16, 10, 21, 0.72);
+	/* A literary serif with a quirky grotesque under it, for a room in the evening. */
+	--font-head: "Newsreader", "Iowan Old Style", Georgia, serif;
+	--font-body: "Karla", "Segoe UI", system-ui, sans-serif;
+	--font-num: "JetBrains Mono", Consolas, monospace;
+}
+/* Blackout: true black, white text, tighter corners. The glow is raised, because a lamp colour has nothing
+   to mix into. */
+:root[data-theme="blackout"] {
+	color-scheme: dark;
+	--bg: #000000; --surface: #0d0d0d; --surface-2: #171717; --inset: #050505; --line: #353535; --line-soft: #242424; --card-line: #242424;
+	--ink: #ffffff; --ink-2: #d2d2d2; --ink-3: #a9a9a9;
+	--accent: #8ecbff; --accent-ink: #04121f; --focus: #8ecbff; --mark: rgba(142, 203, 255, 0.18);
+	--auto: #ffb46b; --auto-bg: #33240f; --on-ink: #1a1206;
+	--hand: #c9b0ff; --hand-bg: #241d38;
+	--ok: #74dfa2; --ok-bg: #0f2b1a; --on-ok: #000000;
+	--off: #a9a9a9; --off-bg: #050505;
+	--warn: #ffd93d; --warn-bg: #33290a; --bad: #ff7b6b; --bad-bg: #361612; --on-state: #000000;
+	--k2200: #ffa04a; --k2700: #ffb46b; --k3000: #ffc187; --k3200: #ffc98f; --k4000: #ffe0bd; --k4500: #ffe9d0;
+	--lamp-max: 0.38; --lamp-reach: 70%; --lamp-edge: transparent; --on-lamp: #2a1c0c; --lit-ink-2: #ffffff;
+	--room-off: #050505; --room-off-ink: #a9a9a9;
+	--shadow-pop: 0 12px 36px rgba(0, 0, 0, 0.8);
+	--t-xs: 12px; --t-sm: 13.5px; --t-md: 15.5px; --t-lg: 20px; --t-xl: 30px; --t-xxl: 48px; --lh: 1.4;
+	--ls-dis: -0.03em; --ls-dis-s: -0.02em; --ls-big: -0.05em;
+	--r: 8px; --r-big: 14px; --r-pill: 999px;
+	--w-body: 400; --w-med: 500; --w-semi: 600; --w-strong: 600; --w-bold: 700; --w-black: 800;
+	--now: #e3a0cf; --lane: #070707;
+	--kelvin-weight: 100%; --kelvin-shade: transparent;
+	--daylight-night: #1d2136; --daylight-twilight: #3a4876; --daylight-day: #a3804a; --daylight-halo: rgba(5, 5, 5, 0.72);
+	/* The tightest, most technical pairing of the set, on the densest scale: nothing is spent on decoration
+	   here, in type any more than in colour. */
+	--font-head: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+	--font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+	--font-num: "Martian Mono", Consolas, monospace;
+}
+/* 0z0: the studio palette, the studio face Cascadia Mono, light weights throughout. Teal accent, blue for
+   running, purple for manual, amber for a warning; the error red is pushed redder than the amber beside it. */
+:root[data-theme="0z0"] {
+	color-scheme: dark;
+	--bg: #0a0f17; --surface: #0e1620; --surface-2: #142130; --inset: #070b11; --line: #24384c; --line-soft: #182734; --card-line: #182734;
+	--ink: #eaf2f8; --ink-2: #b9cbd6; --ink-3: #7fa8b8;
+	--accent: #27e0c8; --accent-ink: #04231f; --focus: #27e0c8; --mark: rgba(39, 224, 200, 0.16);
+	--auto: #ffb46b; --auto-bg: #33260f; --on-ink: #1a1206;
+	--hand: #7b8cff; --hand-bg: #1d2440;
+	--ok: #11a9d6; --ok-bg: #0d2733; --on-ok: #0a0f17;
+	--off: #7fa8b8; --off-bg: #070b11;
+	--warn: #d8a657; --warn-bg: #2e2716; --bad: #d9705e; --bad-bg: #35191a; --on-state: #0a0f17;
+	--k2200: #ffa04a; --k2700: #ffb46b; --k3000: #ffc187; --k3200: #ffc98f; --k4000: #ffe0bd; --k4500: #ffe9d0;
+	--lamp-max: 0.34; --lamp-reach: 66%; --lamp-edge: transparent; --on-lamp: #2a1c0c; --lit-ink-2: #eaf2f8;
+	--room-off: #070b11; --room-off-ink: #7fa8b8;
+	--shadow-pop: 0 12px 36px rgba(0, 0, 0, 0.6);
+	--t-xs: 12px; --t-sm: 13.5px; --t-md: 15px; --t-lg: 20px; --t-xl: 29px; --t-xxl: 46px; --lh: 1.5;
+	--ls-dis: 0; --ls-dis-s: 0; --ls-big: 0;
+	--r: 4px; --r-big: 6px; --r-pill: 4px;
+	--w-body: 300; --w-med: 300; --w-semi: 400; --w-strong: 400; --w-bold: 500; --w-black: 500;
+	--now: #e46ad6; --lane: #0c131c;
+	--kelvin-weight: 100%; --kelvin-shade: transparent;
+	--daylight-night: #101a30; --daylight-twilight: #2f4788; --daylight-day: #8a6a30; --daylight-halo: rgba(7, 11, 17, 0.72);
+	/* The studio's own face, everywhere: headings, text and figures are one family. A monospace sets its own
+	   width, so the display tracking is dropped and the scale comes in a step to keep the same words on the
+	   same number of lines. */
+	--font-head: "Cascadia Mono", "JetBrains Mono", Consolas, "Courier New", monospace;
+	--font-body: "Cascadia Mono", "JetBrains Mono", Consolas, "Courier New", monospace;
+	--font-num: "Cascadia Mono", "JetBrains Mono", Consolas, "Courier New", monospace;
+}
+:root[data-theme="paper"] {
+	color-scheme: light;
+	--bg: #f6f5f1; --surface: #ffffff; --surface-2: #efeee9; --inset: #e6e4de; --line: #d3d1c9; --line-soft: #e4e2db; --card-line: #e4e2db;
+	--ink: #17181a; --ink-2: #45474c; --ink-3: #5f6166;
+	--accent: #0d6c8f; --accent-ink: #ffffff; --focus: #0d6c8f; --mark: rgba(13, 108, 143, 0.1);
+	--auto: #9a4f0c; --auto-bg: #fbe6cf; --on-ink: #ffffff;
+	--hand: #6340c9; --hand-bg: #ebe4fc;
+	--ok: #1f6f47; --ok-bg: #d8efe2; --on-ok: #ffffff;
+	--off: #5f6166; --off-bg: #e6e4de;
+	--warn: #735400; --warn-bg: #f7eac0; --bad: #ad2a22; --bad-bg: #fadcd8; --on-state: #ffffff;
+	--k2200: #ff9436; --k2700: #ffa955; --k3000: #ffb86e; --k3200: #ffc07c; --k4000: #ffd49f; --k4500: #ffdfb6;
+	--lamp-max: 0.6; --lamp-reach: 72%; --lamp-edge: rgba(110, 70, 20, 0.38); --on-lamp: #2a1c0c; --lit-ink-2: #45474c;
+	--room-off: #dcdad3; --room-off-ink: #45474c;
+	--shadow-pop: 0 12px 36px rgba(20, 20, 20, 0.16);
+	--t-xs: 12.5px; --t-sm: 14px; --t-md: 16px; --t-lg: 23px; --t-xl: 34px; --t-xxl: 52px; --lh: 1.5;
+	--ls-dis: -0.006em; --ls-dis-s: -0.004em; --ls-big: -0.025em;
+	--r: 12px; --r-big: 20px; --r-pill: 999px;
+	--w-body: 400; --w-med: 500; --w-semi: 600; --w-strong: 650; --w-bold: 700; --w-black: 800;
+	--now: #a8327a; --lane: #f6f5f1;
+	--kelvin-weight: 45%; --kelvin-shade: #17181a;
+	--daylight-night: #384777; --daylight-twilight: #7e93c9; --daylight-day: #e8d296; --daylight-halo: rgba(255, 255, 255, 0.8);
+	/* Editorial: a bookish serif over a warm humanist sans, to suit near-white and hairline rules. */
+	--font-head: "Lora", Georgia, "Times New Roman", serif;
+	--font-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+	--font-num: "Source Code Pro", Consolas, monospace;
+}
+/* Fern: pale sage ground, dark green ink, berry accent. */
+:root[data-theme="fern"] {
+	color-scheme: light;
+	--bg: #eef1e8; --surface: #fbfcf8; --surface-2: #e6ebdd; --inset: #dde3d2; --line: #c5cdb6; --line-soft: #e0e6d6; --card-line: #e2e7d9;
+	--ink: #1a2018; --ink-2: #43503f; --ink-3: #545f4e;
+	--accent: #8a2f5e; --accent-ink: #ffffff; --focus: #8a2f5e; --mark: rgba(138, 47, 94, 0.1);
+	--auto: #8a4a12; --auto-bg: #f3e2c8; --on-ink: #ffffff;
+	--hand: #4a3fb0; --hand-bg: #e3e2f5;
+	--ok: #1d6440; --ok-bg: #d7e9d9; --on-ok: #ffffff;
+	--off: #545f4e; --off-bg: #dde3d2;
+	--warn: #6b5100; --warn-bg: #f0e6b4; --bad: #a8291f; --bad-bg: #f6dbd4; --on-state: #ffffff;
+	--k2200: #ff9436; --k2700: #ffa955; --k3000: #ffb86e; --k3200: #ffc07c; --k4000: #ffd49f; --k4500: #ffdfb6;
+	--lamp-max: 0.58; --lamp-reach: 72%; --lamp-edge: rgba(90, 70, 20, 0.36); --on-lamp: #2a1c0c; --lit-ink-2: #43503f;
+	--room-off: #d3d9c6; --room-off-ink: #43503f;
+	--shadow-pop: 0 12px 36px rgba(26, 32, 24, 0.16);
+	--t-xs: 12.5px; --t-sm: 14px; --t-md: 16px; --t-lg: 22px; --t-xl: 31px; --t-xxl: 48px; --lh: 1.55;
+	--ls-dis: -0.02em; --ls-dis-s: -0.012em; --ls-big: -0.035em;
+	--r: 12px; --r-big: 20px; --r-pill: 999px;
+	--w-body: 400; --w-med: 500; --w-semi: 600; --w-strong: 650; --w-bold: 700; --w-black: 800;
+	--now: #0e6a7a; --lane: #eef1e8;
+	--kelvin-weight: 45%; --kelvin-shade: #1a2018;
+	--daylight-night: #384777; --daylight-twilight: #7e93c9; --daylight-day: #e8d296; --daylight-halo: rgba(251, 252, 248, 0.8);
+	/* The long-read theme, so the warmth sits in the text face: a reading serif, a warm mono beside it, and a
+	   grotesque above. */
+	--font-head: "Epilogue", "Segoe UI", system-ui, sans-serif;
+	--font-body: "Literata", Georgia, "Times New Roman", serif;
+	--font-num: "Red Hat Mono", Consolas, monospace;
+}
+/* ==== end T. Themes ==== */
+
+/* ============================================================ shell */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; background: var(--bg); }
+body { color: var(--ink); font-family: var(--font-body); font-size: var(--t-md); line-height: var(--lh); }
+
+.app { min-height: 100vh; display: flex; flex-direction: column; background: var(--bg); color: var(--ink); }
+.app a { color: inherit; }
+.app :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* The router focuses each page's h1 after navigation; that focus is for a screen reader, not a ring. */
+[tabindex="-1"]:focus { outline: none; }
+
+.top { display: flex; align-items: center; flex-wrap: wrap; gap: 0 28px; min-height: 62px; padding: 0 28px; }
+.brand { display: flex; align-items: center; gap: 9px; font-weight: var(--w-black); white-space: nowrap; }
+.brand svg { width: 22px; height: 22px; color: var(--accent); flex: none; }
+.brand span { font-family: var(--font-head); font-size: 18px; letter-spacing: var(--ls-dis); }
+.nav { display: flex; gap: 4px; }
+.nav a { padding: 8px 15px; border-radius: var(--r-pill); color: var(--ink-2); text-decoration: none; font-size: var(--t-sm); font-weight: var(--w-semi); white-space: nowrap; }
+.nav a.cur { color: var(--ink); background: var(--surface); box-shadow: inset 0 0 0 1px var(--card-line); }
+.top-end { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+.theme-picker { display: flex; align-items: center; gap: 8px; }
+.theme-picker-label { font-size: var(--t-xs); color: var(--ink-3); white-space: nowrap; }
+.theme-select { padding: 5px 10px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface-2); color: var(--ink); font-size: var(--t-sm); }
+.top-end-note { font-size: var(--t-xs); color: var(--ink-3); white-space: nowrap; }
+
+/* Quiet by default, matching the top-end-note beside it: furniture on the bar, not a fourth destination. */
+.feedback-link { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: var(--r); color: var(--ink-3); text-decoration: none; font-size: var(--t-sm); white-space: nowrap; }
+.feedback-link svg { width: 17px; height: 17px; flex: none; }
+.feedback-link:hover { background: var(--surface-2); color: var(--ink); }
+.feedback-link:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.main { width: 100%; max-width: 1240px; margin: 0 auto; padding: 18px 28px 48px; display: flex; flex-direction: column; gap: 14px; flex: 1; }
+.pagetitle { margin: 0; font-family: var(--font-head); font-size: var(--t-xl); font-weight: var(--w-bold); letter-spacing: var(--ls-dis); }
+.glass { padding: 18px 20px; border-radius: var(--r-big); background: var(--surface); box-shadow: inset 0 0 0 1px var(--card-line); }
+.lede { margin: 0; color: var(--ink-2); }
+
+.tabbar { display: none; }
+
+@media (max-width: 720px) {
+	.top { gap: 0 12px; padding: 0 16px; min-height: 54px; }
+	.top-end-note { display: none; }
+	.top .nav { display: none; }
+	/* Glyph only: the anchor's aria-label still carries the wording, and the padding keeps it a touch target. */
+	.feedback-link-text { display: none; }
+	.feedback-link { padding: 8px; }
+	.main { padding: 12px 16px 24px; gap: 12px; }
+
+	.tabbar { position: sticky; bottom: 0; z-index: 20; display: flex; justify-content: space-around; padding: 6px 8px 10px; background: var(--surface); border-top: 1px solid var(--line-soft); }
+	.tabbar a { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 14px; font-size: 12px; font-weight: var(--w-semi); color: var(--ink-3); text-decoration: none; }
+	.tabbar a.cur { color: var(--ink); }
+	.tabbar a.cur svg { color: var(--accent); }
+	.tabbar svg { width: 22px; height: 22px; }
+}
+
+/* ==== K. Lamplight kit ==== */
+/* Room, house, dashboard and activity share these: the fold, the row, the pair, the (i) popover, the state
+   chip, the warning mark, the "who" tag, the lamp-card hero, the "right now" card and the settings jump row.
+   .lamp-glow and .lampdot are LampPaint's CSS counterpart: --lampc and --lvl painted, nothing else reads them.
+   The toggle, segmented control, checkbox row, name/value field, button, notice and tail label are drawn once
+   here too — room and house both draw them from the same theme draft, so one copy is what renders on both. */
+.row-value, .big b, .facts dd, .fold-sum { font-variant-numeric: tabular-nums; }
+
+.chip { display: inline-flex; align-items: center; gap: 7px; padding: 1px 10px 1px 8px; border-radius: var(--r-pill); font-size: var(--t-xs); font-weight: var(--w-strong); line-height: 1.7; white-space: nowrap; }
+.chip::before { content: ""; flex: none; width: 9px; height: 9px; background: currentColor; }
+.st-auto { color: var(--auto); background: var(--auto-bg); }
+.st-auto::before { border-radius: 50%; }
+.st-dim { color: var(--warn); background: var(--warn-bg); }
+.st-dim::before { border-radius: 50%; background: linear-gradient(90deg, currentColor 50%, transparent 50%); box-shadow: inset 0 0 0 1.5px currentColor; }
+.st-hand { color: var(--hand); background: var(--hand-bg); }
+.st-hand::before { transform: rotate(45deg) scale(0.78); }
+.st-idle { color: var(--off); background: var(--surface-2); }
+.st-idle::before { border-radius: 50%; background: none; box-shadow: inset 0 0 0 1.5px currentColor; }
+.st-ok { color: var(--ok); background: var(--ok-bg); }
+.st-ok::before { border-radius: 50%; }
+.chip.bare { padding: 0; background: none; gap: 0; }
+
+.bang { display: inline-grid; place-items: center; flex: none; width: 18px; height: 18px; border-radius: 50%; background: var(--warn); color: var(--on-state); font-size: 12px; font-weight: var(--w-black); line-height: 1; font-family: var(--font-body); font-style: normal; }
+.bang.bad { background: var(--bad); }
+
+.by { display: inline-flex; align-items: baseline; flex-wrap: wrap; gap: 6px; font-size: var(--t-xs); color: var(--ink-2); }
+.by i { padding: 0 5px; border-radius: 3px; background: var(--surface-2); color: var(--ink-3); font-size: 10.5px; font-style: normal; font-weight: var(--w-bold); letter-spacing: 0.08em; text-transform: uppercase; }
+.by-person i { color: var(--hand); background: var(--hand-bg); }
+
+.info { position: relative; display: inline-flex; }
+.info-i { display: inline-grid; place-items: center; flex: none; width: 20px; height: 20px; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: none; color: var(--ink-3); font-family: Georgia, "Times New Roman", serif; font-size: 12px; font-style: italic; font-weight: var(--w-bold); line-height: 1; }
+.info-i[aria-expanded="true"] { border-color: var(--ink); color: var(--ink); }
+/* Severity: yellow is worth knowing, red needs attention. */
+.info-i.warn, .info-i.warn[aria-expanded="true"] { border-color: var(--warn); background: var(--warn); color: var(--on-state); }
+.info-i.bad, .info-i.bad[aria-expanded="true"] { border-color: var(--bad); background: var(--bad); color: var(--on-state); }
+.info-pop { position: absolute; z-index: 40; top: calc(100% + 6px); left: -10px; width: 300px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-big); background: var(--surface); box-shadow: var(--shadow-pop); color: var(--ink); font-family: var(--font-body); font-size: var(--t-sm); font-weight: var(--w-body); line-height: 1.45; letter-spacing: 0; text-transform: none; white-space: normal; text-align: left; }
+.info-pop b { display: block; margin-bottom: 2px; font-weight: var(--w-bold); }
+
+.pair { display: inline-flex; align-self: flex-start; align-items: center; flex-wrap: wrap; gap: 4px 10px; min-height: 44px; padding: 4px 4px 4px 14px; border-radius: var(--r-pill); background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--card-line); max-width: 100%; }
+.pair-name { font-weight: var(--w-strong); white-space: nowrap; }
+.word { display: inline-grid; place-items: center; min-width: 3.4em; padding: 2px 10px; border-radius: var(--r-pill); font-family: var(--font-num); font-size: var(--t-xs); font-weight: var(--w-bold); letter-spacing: 0.08em; line-height: 1.5; }
+.word.on { color: var(--on-ink); background: var(--auto); }
+.word.ok { color: var(--on-ok); background: var(--ok); }
+.word.off { color: var(--off); background: var(--off-bg); }
+.word.plain { color: var(--ink); background: var(--inset); }
+.pair-btns { display: inline-flex; gap: 3px; margin-left: auto; }
+.pair-btns button { padding: 7px 12px; border: 1px solid transparent; border-radius: var(--r-pill); background: none; color: var(--ink-2); font-size: var(--t-sm); font-weight: var(--w-semi); white-space: nowrap; }
+.pair-btns button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+/* No name and no word: the pill is the buttons, so the label's left inset and the push-right would both leave a gap. */
+.pair-bare { padding-left: 8px; }
+.pair-bare .pair-btns { margin-left: 0; }
+.lampcard .pair { background: color-mix(in srgb, var(--surface) 72%, transparent); }
+
+.warns { display: flex; flex-wrap: wrap; gap: 6px 20px; margin: 0; padding: 0; list-style: none; }
+.warn-i { display: inline-flex; align-items: center; gap: 8px; font-size: var(--t-sm); font-weight: var(--w-semi); }
+.warn-i.bad { color: var(--bad); }
+.warn-i.warn { color: var(--warn); }
+.facts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 5px 16px; margin: 0; font-size: var(--t-sm); }
+.facts dt { color: var(--ink-3); white-space: nowrap; }
+.facts dd { margin: 0; font-family: var(--font-num); font-size: 13px; white-space: nowrap; }
+
+.lamp-glow { background: radial-gradient(135% 140% at 0% 0%, color-mix(in srgb, var(--lampc) calc(var(--lamp-max) * var(--lvl, 1) * 100%), transparent), transparent var(--lamp-reach)), var(--surface); }
+.lampdot { display: inline-block; flex: none; width: 12px; height: 12px; border-radius: 50%; background: var(--lampc); box-shadow: 0 0 0 1px var(--lamp-edge), 0 0 12px color-mix(in srgb, var(--lampc) 55%, transparent); }
+.lampdot.dark { background: none; box-shadow: inset 0 0 0 1.5px var(--room-off-ink); }
+
+.lampcard { display: flex; flex-direction: column; gap: 14px; padding: 22px 24px; border-radius: var(--r-big); box-shadow: inset 0 0 0 1px var(--card-line); }
+.lc-top { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 18px; }
+.lc-top .chip { align-self: center; }
+.lampcard h1 { margin: 0; font-family: var(--font-head); font-size: var(--t-xl); font-weight: var(--w-black); line-height: 1.1; letter-spacing: var(--ls-dis); }
+.big { display: inline-flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; }
+.big b { font-size: var(--t-xxl); font-weight: var(--w-black); line-height: 1; letter-spacing: var(--ls-big); white-space: nowrap; }
+.big span { font-size: 18px; color: var(--lit-ink-2); }
+.lc-pairs { display: flex; flex-wrap: wrap; gap: 8px; }
+/* The way into adaptive lighting stands beside the light pair, so it takes the pill's shape and height. */
+.lc-pairs .btn { min-height: 44px; padding: 6px 16px; border-radius: var(--r-pill); }
+
+.d2-now { display: flex; flex-direction: column; gap: 16px; }
+
+.d2-index { position: sticky; top: 0; z-index: 6; display: flex; gap: 6px; margin-block: -2px; padding: 10px 0; overflow-x: auto; scrollbar-width: none; background: var(--bg); }
+.d2-index button { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 6px 13px; border: 1px solid var(--line); border-radius: var(--r-pill); background: var(--surface); font-size: var(--t-sm); font-weight: var(--w-semi); white-space: nowrap; }
+.d2-index .n { min-width: 18px; padding: 0 5px; border-radius: var(--r-pill); background: var(--accent); color: var(--accent-ink); font-size: 11.5px; font-weight: var(--w-bold); text-align: center; }
+
+.fold { border-radius: var(--r-big); background: var(--surface); box-shadow: inset 0 0 0 1px var(--card-line); }
+.fold-head { display: flex; align-items: center; gap: 10px; width: 100%; padding: 16px 20px; border: 0; background: none; text-align: left; }
+.fold-title { font-family: var(--font-head); font-weight: var(--w-bold); font-size: var(--t-lg); line-height: 1.15; letter-spacing: var(--ls-dis-s); }
+.fold-count { flex: none; min-width: 22px; padding: 0 6px; border-radius: var(--r-pill); background: var(--accent); color: var(--accent-ink); font-size: var(--t-xs); font-weight: var(--w-bold); line-height: 20px; text-align: center; }
+.fold-end { margin-left: auto; display: flex; align-items: center; gap: 10px; min-width: 0; }
+.fold-sum { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-3); font-family: var(--font-num); font-size: 12.5px; }
+.fold.open .fold-sum { display: none; }
+.chev { flex: none; width: 9px; height: 9px; margin: 0 6px 4px; border-right: 2px solid var(--ink-2); border-bottom: 2px solid var(--ink-2); transform: rotate(45deg); }
+.fold.open > .fold-head .chev { transform: rotate(-135deg); margin: 4px 6px 0; }
+.fold-body { padding: 0 20px 20px; }
+
+/* Settings as tiles, the question first and the answer under it. Row is clickable to edit; a wide or
+   per-room row shows its control unconditionally, so it never joins the single-row-open behaviour the
+   click handler keeps to one. The label carries the weight now — it is what the card is answering — and
+   the value stays bold and coloured so it still reads at a glance, once the question has been read. */
+.rows { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); grid-auto-flow: dense; gap: 10px; }
+.rows.one { grid-template-columns: minmax(0, 1fr); }
+.row { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-width: 0; padding: 12px 14px; border-radius: var(--r); background: var(--surface-2); cursor: pointer; }
+.row.wide { grid-column: 1 / -1; cursor: default; }
+.row-label { flex: none; min-width: 0; display: flex; align-items: center; gap: 7px; color: var(--ink); font-size: var(--t-sm); font-weight: var(--w-strong); line-height: 1.3; }
+.row-value { display: block; font-size: 17px; font-weight: var(--w-bold); color: var(--accent); line-height: 1.25; letter-spacing: var(--ls-dis-s); }
+.row.wide .row-value { display: none; }
+.row-ctl { display: none; align-items: center; flex-wrap: wrap; gap: 6px; margin: 6px 0 0; min-width: 0; max-width: 100%; }
+.row.editing .row-ctl, .row.wide .row-ctl { display: flex; }
+.row.wide .row-ctl { margin-top: 4px; }
+.row.own { box-shadow: inset 0 0 0 2px var(--accent); }
+.row.editing { background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--line); }
+.row.own.editing { box-shadow: inset 0 0 0 2px var(--accent); }
+.row-revert { order: 5; margin-top: 4px; padding: 0; border: 0; background: none; text-align: left; color: var(--accent); font-size: var(--t-xs); font-weight: var(--w-strong); }
+.row.per .row-value { color: var(--ink-3); }
+
+@media (max-width: 720px) {
+	.info-pop { position: fixed; left: 12px; right: 12px; top: auto; bottom: 12px; width: auto; }
+	.fold-sum { max-width: 42vw; }
+	.pair { width: 100%; border-radius: min(22px, var(--r-big)); padding: 6px 6px 6px 14px; }
+	.pair-btns { flex: 1 1 100%; }
+	.pair-btns button { flex: 1; }
+	/* Nothing precedes the buttons but the (i), so a full-width wrap would leave that icon alone on a line. */
+	.pair-bare .pair-btns { flex: 1 1 auto; }
+	.lampcard { padding: 16px; gap: 10px; }
+	.big b { font-size: 40px; }
+	.d2-now { gap: 10px; }
+	.d2-now .facts { display: none; }
+	.rows { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+	.row { padding: 10px 12px; }
+	.row.editing { grid-column: 1 / -1; }
+	.row-value { font-size: 16px; }
+	.fold-head { padding: 14px 16px; }
+	.fold-title { font-size: 20px; }
+	.fold-body { padding: 0 14px 16px; }
+}
+
+.tail-lab { margin-top: 14px; font-size: var(--t-xs); font-weight: var(--w-bold); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); }
+
+.toggle { position: relative; flex: none; width: 46px; height: 26px; padding: 0; border: 1px solid var(--line); border-radius: 999px; background: var(--off-bg); }
+.toggle .knob { position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--off); transition: transform 0.15s ease; }
+.toggle.on { border-color: var(--ok); background: var(--ok-bg); }
+.toggle.on .knob { transform: translateX(20px); background: var(--ok); }
+@media (prefers-reduced-motion: reduce) { .toggle .knob { transition: none; } }
+
+.seg { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 2px; border-radius: var(--r-pill); background: var(--inset); max-width: 100%; }
+.seg button { padding: 5px 11px; border: 0; border-radius: var(--r-pill); background: none; color: var(--ink-2); font-size: var(--t-sm); font-weight: var(--w-semi); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+
+.checks { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: var(--t-sm); }
+.checks label { display: inline-flex; align-items: center; gap: 6px; }
+.checks input { accent-color: var(--accent); }
+
+.cell { padding: 6px 12px; border: 1px solid var(--line); border-radius: var(--r-pill); background: var(--inset); color: var(--ink); font: inherit; font-size: var(--t-sm); min-width: 12rem; max-width: 100%; }
+
+.btn { padding: 6px 12px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface-2); font-size: var(--t-sm); font-weight: var(--w-semi); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.danger { color: var(--bad); }
+
+.notice { padding: 10px 14px; border-radius: var(--r); background: var(--surface-2); font-size: var(--t-sm); color: var(--ink-2); }
+.notice.warn { background: var(--warn-bg); color: var(--warn); }
+.notice.bad { background: var(--bad-bg); color: var(--bad); }
+.notice.ok { background: var(--ok-bg); color: var(--ok); }
+.notice strong { color: var(--ink); font-weight: var(--w-bold); }
+.notice ul { margin: 6px 0 0; padding-left: 18px; }
+.notice li { margin: 2px 0; }
+/* ==== end K. Lamplight kit ==== */
+
+/* ==== B. Shared control tokens ==== */
+/* The tokens controls.css reads that Lamplight has no name of its own for. --now, --lane, --kelvin-weight,
+   --kelvin-shade and the four --daylight-* tokens moved into block T: each theme sets its own. What is left
+   here is theme-independent, mostly aliases of tokens block T already defines per theme. */
+:root {
+	--icon-accent: var(--accent);
+	--grid: var(--line-soft);
+	--rule: 1px solid var(--line); --rule-inner: 1px solid var(--line-soft);
+	--radius-control: 10px; --radius-chip: 8px;
+	--stroke-hair: 1px; --stroke-control: 1.5px; --stroke-mark: 2px;
+	--space-1: 4px; --space-2: 6px; --space-3: 8px; --space-4: 12px; --space-5: 16px; --space-6: 24px;
+	--label-track: 0.14em;
+}
+/* ==== end B. Shared control tokens ==== */
+
+/* ==== 1. Dashboard and layout ==== */
+/* The dashboard body: notices, the house card, the timeline above the room tiles, and what is worth knowing.
+   A tile's colour is LampPaint's --lampc and --lvl through the kit's .lamp-glow; timeline blocks and band
+   segments read the same --lampc. */
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.tick, .tile .pct, .log time { font-variant-numeric: tabular-nums; }
+
+.sec-h { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 12px; margin: 0 0 10px; font-family: var(--font-head); font-size: var(--t-lg); font-weight: var(--w-bold); letter-spacing: var(--ls-dis-s); }
+.sec-h small { font-family: var(--font-num); font-size: 12.5px; font-weight: var(--w-body); color: var(--ink-3); letter-spacing: 0; }
+
+.d2-house { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
+.d2-cell { display: flex; flex-direction: column; gap: 4px; max-width: 100%; }
+.d2-house .word { text-transform: uppercase; }
+.d2-note { margin: 0; padding-left: 14px; font-size: var(--t-xs); color: var(--ink-3); }
+.d2-note.ok { color: var(--ok); }
+.d2-note.bad { color: var(--bad); }
+.d2-note a { color: var(--accent); }
+.people { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0; padding: 0; list-style: none; font-size: var(--t-sm); }
+.people li { display: inline-flex; align-items: center; gap: 6px; }
+.people li::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
+.people li.away, .people li.unknown { color: var(--ink-3); }
+.people li.away::before { background: none; box-shadow: inset 0 0 0 1.5px var(--ink-3); }
+.people li.unknown::before { background: none; box-shadow: inset 0 0 0 1.5px var(--ink-3); border-radius: 2px; }
+
+.tl { --name: 170px; display: flex; flex-direction: column; font-size: var(--t-sm); }
+.tl-row { display: grid; grid-template-columns: var(--name) minmax(0, 1fr); text-decoration: none; }
+.tl-name { display: flex; align-items: center; gap: 8px; min-width: 0; padding-right: 10px; white-space: nowrap; overflow: hidden; }
+.tl-name span { overflow: hidden; text-overflow: ellipsis; }
+.tl-track { position: relative; height: 34px; border-left: 1px solid var(--line-soft); border-top: 1px solid var(--line-soft); overflow: hidden; }
+.tl-axis .tl-track, .tl-band .tl-track { border-top: 0; }
+.tl-axis .tl-track { height: 22px; }
+.tick { position: absolute; top: 3px; transform: translateX(-50%); font-family: var(--font-num); font-size: 11px; color: var(--ink-3); white-space: nowrap; }
+/* The window's first and last hour sit on the track's edges; hung inwards so neither is clipped. */
+.tl-axis .tick:first-child { transform: none; }
+.tl-axis .tick:nth-last-child(2) { transform: translateX(-100%); }
+.tick.now { z-index: 1; padding: 0 3px; background: var(--surface); color: var(--ink); font-weight: var(--w-bold); }
+.hour { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--line-soft); }
+.tl-band .tl-track { height: 18px; }
+.band { position: absolute; top: 3px; bottom: 3px; overflow: hidden; background: var(--lampc); box-shadow: inset 0 0 0 1px var(--lamp-edge); }
+.band b { position: absolute; left: 6px; top: 0; font-size: 10.5px; line-height: 12px; font-weight: var(--w-bold); letter-spacing: 0.06em; text-transform: uppercase; color: var(--on-lamp); }
+.tl-group:not(:has(.lane)) .floor { display: none; }
+.floor { padding: 12px 0 4px; font-size: 11.5px; font-weight: var(--w-bold); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
+.blk { position: absolute; top: 8px; bottom: 8px; border-radius: 3px; }
+.blk-auto { background: var(--lampc, var(--auto)); box-shadow: inset 0 0 0 1px var(--lamp-edge); }
+.blk-dim { background: repeating-linear-gradient(135deg, var(--lampc, var(--warn)) 0 4px, transparent 4px 7px); box-shadow: inset 0 0 0 1.5px var(--lampc, var(--warn)), inset 0 0 0 1px var(--lamp-edge); }
+.blk-hand { background: var(--hand); }
+.blk-held { background: repeating-linear-gradient(135deg, var(--hand) 0 2px, transparent 2px 6px); box-shadow: inset 0 0 0 1.5px var(--hand); }
+.nowline { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--accent); }
+.nextmark { position: absolute; top: 50%; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border: 2px solid var(--ink-2); border-radius: 50%; background: var(--surface); }
+.refuse { position: absolute; top: 9px; bottom: 9px; width: 2px; background: var(--ink-3); }
+.tl-quiet { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 8px; padding: 10px 0 0; border-top: 1px solid var(--line-soft); font-size: var(--t-sm); color: var(--ink-3); }
+.tl-quiet a { text-decoration: none; }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+.tile { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-height: 112px; padding: 14px 16px; border-radius: var(--r-big); text-decoration: none; box-shadow: inset 0 0 0 1px var(--card-line); }
+.tile.dark { background: var(--room-off); color: var(--room-off-ink); }
+/* Lit with no reading to paint, as under a scene: plain surface, never the dark of an off room. */
+.tile.lit:not([style]) { background: var(--surface-2); }
+.tile.lit:not([style]) .lampdot { background: var(--ink-2); }
+.tile b { font-size: 17px; font-weight: var(--w-bold); }
+.tile .pct { display: flex; align-items: center; flex-wrap: wrap; gap: 2px 8px; margin-top: auto; font-size: 24px; font-weight: var(--w-black); letter-spacing: var(--ls-dis); }
+.tile .pct small { font-size: 13px; font-weight: var(--w-med); color: var(--lit-ink-2); letter-spacing: 0; }
+.tile.dark .pct { font-size: 15px; font-weight: var(--w-semi); }
+.d2-hidden { margin: 10px 0 0; font-size: var(--t-sm); color: var(--ink-3); }
+.d2-hidden a { color: var(--accent); }
+
+.log { margin: 0; padding: 0; list-style: none; }
+.log li { display: grid; grid-template-columns: 3.4em minmax(0, 1fr); gap: 1px 12px; padding: 8px 0; border-top: 1px solid var(--line-soft); font-size: var(--t-sm); }
+.log li:first-child { border-top: 0; }
+.log time { grid-row: span 2; padding-top: 1px; font-family: var(--font-num); font-size: 12.5px; color: var(--ink-3); }
+.log a { text-decoration: none; }
+.log .why { grid-column: 2; font-size: var(--t-xs); color: var(--ink-3); }
+.d2-foot { margin: 8px 0 0; font-size: var(--t-xs); color: var(--ink-3); }
+.morelink { display: inline-block; margin-top: 8px; color: var(--accent); font-size: var(--t-sm); font-weight: var(--w-strong); text-decoration: none; }
+.app .morelink { color: var(--accent); }
+
+@media (max-width: 720px) {
+	.glass { padding: 14px 16px; }
+	.d2-cell { width: 100%; }
+	.tl { --name: 112px; }
+	.tl-name { gap: 5px; }
+	/* Every other hour only: a phone track has room for about five labels. */
+	.tl-axis .tick:nth-child(even):not(.now) { display: none; }
+	.tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+	.tile { min-height: 96px; padding: 12px; }
+	.tile b { font-size: 15px; }
+	.tile .pct { font-size: 20px; }
+	.tile .chip { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+}
+/* ==== end 1. Dashboard and layout ==== */
+
+/* ==== 2. Room page ==== */
+/* The room body: the back link, the lamp hero, the section index, the settings folds and the save line.
+   The toggle, segmented control, checkbox row, name field, button and tail label this page's raw settings
+   markup draws (AllSettingsPanel; Flag, Choice and Steps settings have no leaf control of their own) are the
+   kit's shared copies, not drawn again here. */
+.back { align-self: flex-start; color: var(--ink-2); text-decoration: none; font-size: var(--t-sm); font-weight: var(--w-semi); }
+.since { font-family: var(--font-num); font-size: var(--t-sm); color: var(--ink-3); }
+
+.gear { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.gear li { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; padding: 4px 4px 4px 10px; border-radius: var(--r-pill); background: var(--inset); font-size: var(--t-sm); }
+.gear .x { padding: 0 6px; border: 0; background: none; color: var(--ink-3); font-size: 17px; line-height: 1; }
+
+.sub-h { display: flex; align-items: center; gap: 8px; margin: 16px 0 4px; font-size: var(--t-xs); font-weight: var(--w-bold); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
+
+.btnrow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+
+.savebar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; padding: 10px 14px; border-radius: var(--r); background: var(--surface-2); font-size: var(--t-sm); color: var(--ink-2); }
+.savebar.ok { color: var(--ok); }
+.savebar.pending { color: var(--warn); }
+.savebar.bad { color: var(--bad); }
+.savebar .btn { margin-left: auto; }
+
+@media (max-width: 720px) {
+	.gear li { font-size: var(--t-xs); }
+	.savebar .btn { margin-left: 0; }
+}
+/* ==== end 2. Room page ==== */
+
+/* ==== 3. House page ==== */
+/* Buttons, inputs, chips, badges, notices and panels are not in controls.css, so the leaf controls this page
+   reuses (SelectAuthorityPanel, PeriodSelectPanel, HouseModeOptions, LabelPicker, EntityPicker) draw their own
+   .field/.badge/.panel/.cell/.checks/.empty/.hint/.danger/.unit markup against these rules. .cell/.toggle/.seg/
+   .checks/.tail-lab/.btn/.notice are the kit's shared copies; only .floor-row and the fixed .savebar-fixed toast
+   are drawn here, because this page's own markup needs a layout the shared .floor and .savebar don't. */
+.subnav { display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: var(--t-sm); font-weight: var(--w-semi); }
+.subnav a { color: var(--ink-2); text-decoration: none; padding-bottom: 2px; border-bottom: 2px solid transparent; }
+.subnav a.cur { color: var(--ink); border-bottom-color: var(--accent); }
+
+.per-note { color: var(--ink-3); font-size: var(--t-sm); }
+.panel-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+
+.areas { display: flex; flex-direction: column; }
+.floor-row { display: flex; align-items: center; gap: 10px; padding: 12px 0 4px; font-size: 11.5px; font-weight: var(--w-bold); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
+.area { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid var(--line-soft); }
+/* Named, not :last-child: the reorder arrows sit after the name and would have taken the row's width. */
+.area a, .area > .area-shut { flex: 1; min-width: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 2px 10px; text-decoration: none; color: inherit; }
+.area b { font-weight: var(--w-strong); }
+.area-sum { color: var(--ink-3); font-size: 12.5px; }
+.area.off b { color: var(--ink-3); font-weight: var(--w-med); }
+
+/* ---- generic controls the reused leaf components draw their own markup with ---- */
+button { font: inherit; color: var(--ink); background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r); padding: 5px 12px; font-size: var(--t-sm); cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: 0.5; cursor: default; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: var(--w-semi); }
+button.danger { color: var(--bad); }
+button.add, .add { padding: 5px 10px; border: 1px dashed var(--line); border-radius: var(--r); background: none; color: var(--ink-2); font-size: var(--t-sm); }
+
+input[type="text"], input[type="number"], input[type="password"], select {
+	font: inherit; color: var(--ink); background: var(--inset); border: 1px solid var(--line); border-radius: var(--r); padding: 5px 10px; font-size: var(--t-sm);
+}
+input:focus, select:focus { outline: 2px solid var(--focus); outline-offset: 1px; }
+input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
+.cell.num { width: 6rem; text-align: right; font-family: var(--font-num); }
+.cell.wide { min-width: min(22rem, 100%); max-width: 100%; }
+.unit { color: var(--ink-3); font-size: var(--t-xs); }
+
+/* EntityListPicker's chips are a list, while this sheet's .chip is a state pill with a painted mark in front of
+   it. Without this the picked values arrive bulleted, indented and each wearing a coloured square. */
+.chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.chips .chip { background: var(--surface-2); font-weight: var(--w-med); white-space: normal; }
+.chips .chip::before { content: none; }
+.chip-id { font-family: var(--font-num); color: var(--ink-2); }
+.chip-remove { padding: 0 4px; border: 0; background: none; color: var(--ink-3); line-height: 1; }
+.list-empty { color: var(--ink-3); font-size: var(--t-xs); font-style: italic; }
+.picker-addrow { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+
+.field { padding: 10px 0; border-top: 1px solid var(--line-soft); }
+.field:first-child { border-top: 0; padding-top: 0; }
+.field-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.field-label { font-weight: var(--w-semi); font-size: var(--t-sm); }
+.field-control { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.field-help { color: var(--ink-3); font-size: var(--t-xs); margin-top: 4px; max-width: 60ch; }
+
+.hint { color: var(--ink-3); font-size: var(--t-xs); }
+.hint.ok { color: var(--ok); }
+
+.badge { display: inline-block; padding: 1px 8px; border-radius: var(--r-pill); font-size: 11.5px; font-weight: var(--w-bold); background: var(--inset); color: var(--ink-3); white-space: nowrap; }
+.badge.ok { color: var(--ok); }
+.badge.warn { color: var(--warn); }
+.badge.active-now { color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, var(--inset)); }
+
+.panel { background: var(--surface-2); border-radius: var(--r); padding: 12px 14px; margin-bottom: 10px; }
+.empty { background: var(--surface-2); border: 1px dashed var(--line); border-radius: var(--r); padding: 20px; text-align: center; color: var(--ink-3); }
+
+/* Native disclosure for HouseModeOptions: chevron matches the kit's own fold chevron. */
+details.panel > summary { cursor: pointer; list-style: none; }
+details.panel > summary::-webkit-details-marker { display: none; }
+.area-chevron { flex: none; width: 9px; height: 9px; margin: 0 6px 4px; border-right: 2px solid var(--ink-2); border-bottom: 2px solid var(--ink-2); transform: rotate(45deg); }
+details.panel[open] > summary .area-chevron { transform: rotate(-135deg); margin: 4px 6px 0; }
+
+.savebar-fixed { position: fixed; left: 50%; transform: translateX(-50%); bottom: 16px; z-index: 40; width: min(1100px, calc(100vw - 3rem)); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-big); padding: 10px 16px; box-shadow: var(--shadow-pop); }
+.savebar-note { font-size: var(--t-sm); color: var(--ink-2); }
+.savebar-note.ok { color: var(--ok); }
+.savebar-note.bad { color: var(--bad); }
+.savebar-toast { display: inline-flex; align-items: center; gap: 6px; }
+.savebar-toast::before { content: "\2713"; font-weight: var(--w-bold); }
+
+@media (max-width: 720px) {
+	.savebar-fixed { bottom: 70px; width: calc(100vw - 24px); }
+	.field-head { flex-wrap: wrap; }
+}
+/* ==== end 3. House page ==== */
+
+/* ==== activity ==== */
+.act-controls { display: flex; flex-direction: column; gap: 10px; margin-bottom: 4px; }
+.filters { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.room-select { padding: 6px 14px; border: 0; border-radius: var(--r-pill); background: var(--inset); color: var(--ink); font: inherit; font-size: var(--t-sm); }
+.cats { display: flex; flex-wrap: wrap; gap: 6px; }
+.cat { display: inline-flex; align-items: center; gap: 7px; padding: 4px 11px; border: 1px solid transparent; border-radius: var(--r-pill); background: var(--surface-2); color: var(--ink-2); font-size: var(--t-sm); font-weight: var(--w-semi); }
+.cat[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.cat b { font-family: var(--font-num); font-size: 12px; font-weight: var(--w-med); color: var(--ink-3); }
+.cat[aria-pressed="true"] b { color: var(--bg); }
+.pending { align-self: flex-start; padding: 0; border: 0; background: none; color: var(--accent); font-size: var(--t-sm); font-weight: var(--w-strong); }
+.hidden-note { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 0; font-size: var(--t-sm); color: var(--ink-2); }
+.hidden-note button { padding: 0; border: 0; background: none; color: var(--accent); font-size: var(--t-sm); font-weight: var(--w-strong); }
+
+.day { margin: 6px 0 0; font-size: 12px; font-weight: var(--w-bold); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
+.acts { margin: 0; padding: 0; list-style: none; }
+/* Grid items default to min-width:auto, which floors each one at its own content width regardless of its
+   track — a long description or room name then renders wider than its column and spills across the row
+   instead of wrapping inside it. min-width:0 on every text item below removes that floor; overflow-wrap
+   catches the one case wrapping at spaces cannot, a single long unbroken token such as an entity id. */
+.act { display: grid; grid-template-columns: 5.4em 8.5rem minmax(0, 1fr) minmax(0, auto); align-items: baseline; gap: 2px 16px; padding: 9px 0; border-top: 1px solid var(--line-soft); font-size: var(--t-sm); }
+.act time { font-family: var(--font-num); font-size: 12.5px; color: var(--ink-3); }
+.act-room { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: var(--w-strong); text-decoration: none; }
+.act-what { min-width: 0; overflow-wrap: break-word; }
+.act-why { min-width: 0; overflow-wrap: break-word; justify-self: end; color: var(--ink-3); font-size: var(--t-xs); }
+.act-foot { margin: 10px 0 0; color: var(--ink-3); font-size: var(--t-xs); }
+
+@media (max-width: 720px) {
+	.act { grid-template-columns: 5.6em minmax(0, 1fr); gap: 2px 10px; }
+	.act-room, .act-what, .act-why { grid-column: 2; }
+	.act-why { justify-self: start; }
+}
+/* ==== end activity ==== */
+
+/* ==== F. Theme faces ==== */
+/* One @font-face per file under wwwroot/fonts/, unmodified Fontsource 5.3.0 Latin-subset woff2s, licensed
+   OFL 1.1 (licence text beside each family's files). Nothing fetched from elsewhere at run time. A theme's
+   stack in block T already names these families; a browser without a file falls through to the stack's
+   next entry. */
+@font-face { font-family: "Fraunces"; src: url("fonts/fraunces/fraunces-latin-wght-normal.woff2") format("woff2"); font-style: normal; font-weight: 500 700; font-display: swap; }
+@font-face { font-family: "Figtree"; src: url("fonts/figtree/figtree-latin-wght-normal.woff2") format("woff2"); font-style: normal; font-weight: 400 800; font-display: swap; }
+@font-face { font-family: "IBM Plex Mono"; src: url("fonts/ibmplexmono/ibm-plex-mono-latin-400-normal.woff2") format("woff2"); font-style: normal; font-weight: 400; font-display: swap; }
+@font-face { font-family: "IBM Plex Mono"; src: url("fonts/ibmplexmono/ibm-plex-mono-latin-500-normal.woff2") format("woff2"); font-style: normal; font-weight: 500; font-display: swap; }
+@font-face { font-family: "IBM Plex Mono"; src: url("fonts/ibmplexmono/ibm-plex-mono-latin-600-normal.woff2") format("woff2"); font-style: normal; font-weight: 600; font-display: swap; }
+@font-face { font-family: "IBM Plex Mono"; src: url("fonts/ibmplexmono/ibm-plex-mono-latin-700-normal.woff2") format("woff2"); font-style: normal; font-weight: 700; font-display: swap; }
+@font-face { font-family: "Newsreader"; src: url("fonts/newsreader/newsreader-latin-wght-normal.woff2") format("woff2"); font-style: normal; font-weight: 400 700; font-display: swap; }
+@font-face { font-family: "Karla"; src: url("fonts/karla/karla-latin-wght-normal.woff2") format("woff2"); font-style: normal; font-weight: 400 800; font-display: swap; }
+@font-face { font-family: "JetBrains Mono"; src: url("fonts/jetbrainsmono/jetbrains-mono-latin-wght-normal.woff2") format("woff2"); font-style: normal; font-weight: 300 700; font-display: swap; }
+@font-face { font-family: "Space Grotesk"; src: url("fonts/spacegrotesk/space-grotesk-latin-wght-normal.woff2") format("woff2"); font-style: normal; font-weight: 400 700; font-display: swap; }
+@font-face { font-family: "IBM Plex Sans"; src: url("fonts/ibmplexsans/ibm-plex-sans-latin-wght-normal.woff2") format("woff2"); font-style: normal; font-weight: 400 700; font-display: swap; }
+@font-face { font-family: "Martian Mono"; src: url("fonts/martianmono/martian-mono-latin-wght-normal.woff2") format("woff2"); font-style: normal; font-weight: 400 700; font-display: swap; }
+@font-face { font-family: "Cascadia Mono"; src: url("fonts/cascadiamono/cascadia-mono-latin-wght-normal.woff2") format("woff2"); font-style: normal; font-weight: 200 700; font-display: swap; }
+@font-face { font-family: "Lora"; src: url("fonts/lora/lora-latin-wght-normal.woff2") format("woff2"); font-style: normal; font-weight: 400 700; font-display: swap; }
+@font-face { font-family: "Source Sans 3"; src: url("fonts/sourcesans3/source-sans-3-latin-wght-normal.woff2") format("woff2"); font-style: normal; font-weight: 400 800; font-display: swap; }
+@font-face { font-family: "Source Code Pro"; src: url("fonts/sourcecodepro/source-code-pro-latin-wght-normal.woff2") format("woff2"); font-style: normal; font-weight: 400 700; font-display: swap; }
+@font-face { font-family: "Epilogue"; src: url("fonts/epilogue/epilogue-latin-wght-normal.woff2") format("woff2"); font-style: normal; font-weight: 400 800; font-display: swap; }
+@font-face { font-family: "Literata"; src: url("fonts/literata/literata-latin-wght-normal.woff2") format("woff2"); font-style: normal; font-weight: 400 700; font-display: swap; }
+@font-face { font-family: "Red Hat Mono"; src: url("fonts/redhatmono/red-hat-mono-latin-wght-normal.woff2") format("woff2"); font-style: normal; font-weight: 400 700; font-display: swap; }
+/* ==== end F. Theme faces ==== */

@@ -1,0 +1,30 @@
+# .NET build output
+[Bb]in/
+[Oo]bj/
+artifacts/
+*.user
+*.suo
+*.trx
+[Tt]est[Rr]esults/
+
+# Python build and test output
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+*.egg-info/
+
+# IDE and OS
+.vs/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Agent worktrees
+.claude/worktrees/
+
+# Never tracked: the name the shared rules say is off limits.
+appsettings*.Development.json

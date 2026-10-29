@@ -1,0 +1,336 @@
+@page "/room/{AreaId}"
+@implements IDisposable
+@using AdaptiveLighting.Lamplight.Components.Kit
+@using AdaptiveLighting.Lamplight.Components.Room
+@using AdaptiveLighting.Web.Components
+@using Microsoft.JSInterop
+@inject HeatingDocumentHost Engine
+@inject HaCatalog Catalog
+@inject IAreaRegistry Areas
+@inject ISettingsStore Store
+@inject IStampSource Stamps
+@inject TheHouseholdClock Household
+@inject IRoomActivity Activity
+@inject ILogger<Room> Logger
+@inject IJSRuntime Js
+@inject NavigationManager Nav
+@inject IStringLocalizer<AdaptiveHeating.Page.Resources.PageStrings> Words
+
+@* Layout, styling and the wiring of presses to RoomPageModel. Every rule, sentence and write lives in the model. *@
+
+<PageTitle>@_model.PageName &mdash; Adaptive Heating</PageTitle>
+
+<NavigationLock OnBeforeInternalNavigation="ConfirmLeave" ConfirmExternalNavigation="@_model.HasRefusedEdit" />
+
+@if (_model.LoadError is { Length: > 0 } loadError)
+{
+	<h1 class="pagetitle">This room can't be shown</h1>
+	<div class="notice bad">
+		<span class="info-line">
+			<strong>Settings file unreadable</strong>
+			<Info Label="Settings file" Severity="InfoSeverity.Bad">
+				<span class="info-para">@loadError</span>
+				<span class="info-para">Every room is in that one file, so nothing can be shown or changed until it parses.</span>
+			</Info>
+		</span>
+		<a href="settings">Repair it</a>
+	</div>
+}
+else if (_model.Area is null)
+{
+	<h1 class="pagetitle">No such room</h1>
+	<div class="notice">
+		<span class="info-line">
+			<strong>No room @AreaId</strong>
+			<Info Label="No such room">The room may have been removed, or its Home Assistant area may have been changed.</Info>
+		</span>
+		<p><a href="">Dashboard</a> &middot; <a href="settings?section=areas">Every room</a></p>
+	</div>
+}
+else
+{
+	<a class="back" href="">&lsaquo; Dashboard</a>
+
+	<RoomHero Model="@_model" />
+
+	<SectionIndex Items="@IndexItems" OnJump="JumpTo" />
+
+	<RoomLevelsFold Model="@_model" Open="@IsOpen(LevelsId)" OpenChanged="@(open => SetOpen(LevelsId, open))" />
+
+	@if (_model.ShowLevelsCard)
+	{
+		<Fold Id="@ModesId"
+			  Title="Away and boost"
+			  Summary="@ModesSummary"
+			  Open="@IsOpen(ModesId)"
+			  OpenChanged="@(open => SetOpen(ModesId, open))">
+			<div class="levels">
+				<div class="lvl">
+					<div class="lvl-when"><span class="lvl-name">Away</span></div>
+					<div class="lvl-cell">
+						<PresetSlider Value="@(_model.AwayTemperature ?? Presets.TemperatureCelsius[0].Value)"
+									  Options="@Presets.TemperatureCelsius"
+									  Unit="°C"
+									  Label="Away"
+									  Mixed="@(_model.AwayTemperature is null ? "not set" : null)"
+									  AriaLabel="Temperature while away"
+									  ValueChanged="@_model.SetAwayTemperature">
+							<Mark>
+								@if (_model.AwayTemperature is { } away)
+								{
+									<span class="lvl-swatch" style="@Swatch(away)" aria-hidden="true"></span>
+								}
+							</Mark>
+						</PresetSlider>
+					</div>
+				</div>
+				<div class="lvl">
+					<div class="lvl-when"><span class="lvl-name">Boost</span></div>
+					<div class="lvl-cell">
+						<PresetSlider Value="@(_model.BoostTemperature ?? Presets.TemperatureCelsius[0].Value)"
+									  Options="@Presets.TemperatureCelsius"
+									  Unit="°C"
+									  Label="Boost"
+									  Mixed="@(_model.BoostTemperature is null ? "not set" : null)"
+									  AriaLabel="Temperature during boost"
+									  ValueChanged="@_model.SetBoostTemperature">
+							<Mark>
+								@if (_model.BoostTemperature is { } boost)
+								{
+									<span class="lvl-swatch" style="@Swatch(boost)" aria-hidden="true"></span>
+								}
+							</Mark>
+						</PresetSlider>
+					</div>
+				</div>
+			</div>
+		</Fold>
+	}
+	else
+	{
+		@* A room with no reading takes on or off in each mode, as a plain on/off room takes it in lighting. *@
+		<Fold Id="@SwitchedId"
+			  Title="On or off by mode"
+			  Summary="@SwitchedSummary"
+			  Open="@IsOpen(SwitchedId)"
+			  OpenChanged="@(open => SetOpen(SwitchedId, open))">
+			<div class="rows">
+				@foreach (HeatingMode mode in RoomPageModel.Modes)
+				{
+					HeatingMode captured = mode;
+					bool on = _model.SwitchedOnIn(captured);
+
+					<Row Label="@ModeName(captured)" Value="" IsWide="true">
+						<Help>@ModeHelp(captured)</Help>
+						<ChildContent>
+							<Pair Name="@ModeName(captured)"
+								  ShowStatus="false"
+								  Word="@(on ? "ON" : "OFF")"
+								  WordKind="@(on ? "on" : "off")"
+								  Options="@SwitchOptions"
+								  Current="@(on ? 0 : 1)"
+								  OnSelect="@(index => SetSwitched(captured, index == 0))" />
+						</ChildContent>
+					</Row>
+				}
+			</div>
+
+			@if (_model.SwitchRefused is { Length: > 0 } refused)
+			{
+				<div class="notice bad">@refused</div>
+			}
+		</Fold>
+	}
+
+	<RoomSettingsFold Id="@SettingsId" Model="@_model" Open="@IsOpen(SettingsId)" OpenChanged="@(open => SetOpen(SettingsId, open))">
+		<RoomMovementExtra Model="@_model" />
+	</RoomSettingsFold>
+
+	<RoomSensorsFold Model="@_model" Open="@IsOpen(SensorsId)" OpenChanged="@(open => SetOpen(SensorsId, open))" />
+
+	@* Heating's own: the three numbers the add-on works out for this room. Lighting learns nothing. *@
+	@if (_model.Learnt is { } learnt)
+	{
+		<Fold Id="@LearntId" Title="@Words["Learnt"]" Summary="@LearntSummary(learnt)" Open="@IsOpen(LearntId)" OpenChanged="@(open => SetOpen(LearntId, open))">
+			<div class="rows">
+				@foreach ((LearntKind kind, LearntNumber number, string unit, double max) in Numbers(learnt))
+				{
+					LearntKind capturedKind = kind;
+
+					<Row Label="@LearntLabel(kind)"
+						 Value="@LearntValue(number, unit)"
+						 Severity="@(number.Measured ? InfoSeverity.Neutral : InfoSeverity.Warn)"
+						 IsWide="true">
+						<Help>@RestingOn(number) @Words[LearntHelpKey(kind)]</Help>
+						<ChildContent>
+							@if (number.LockedByAPerson)
+							{
+								<Chip Kind="hand" Word="@Words["Locked"]" />
+								<button type="button" class="btn" @onclick="() => _model.SetLearntByHand(capturedKind, null)">@Words["Unlock"]</button>
+							}
+							else
+							{
+								<NumberField Value="@number.Value" Label="@LearntLabel(kind)" Unit="@unit" Min="0" Max="@max" Step="null"
+											 ValueChanged="@(value => _model.SetLearntByHand(capturedKind, value))" />
+							}
+							<button type="button" class="btn danger" @onclick="() => _model.ResetLearnt(capturedKind)">@Words["Reset"]</button>
+						</ChildContent>
+					</Row>
+				}
+			</div>
+
+			@if (_model.LearntRefused is { Length: > 0 } refused)
+			{
+				<div class="notice bad">@refused</div>
+			}
+		</Fold>
+	}
+
+	<RoomTail Model="@_model"
+			  IdentityOpen="@IsOpen(IdentityId)" IdentityOpenChanged="@(open => SetOpen(IdentityId, open))"
+			  LogOpen="@IsOpen(LogId)" LogOpenChanged="@(open => SetOpen(LogId, open))" />
+
+	<RoomSaveBar Model="@_model" />
+}
+
+@code {
+	private const string LevelsId = "levels";
+	private const string ModesId = "modes";
+	private const string SwitchedId = "switched";
+	private const string SettingsId = "settings";
+	private const string SensorsId = "sensors";
+	private const string LearntId = "learnt";
+	private const string IdentityId = "identity";
+	private const string LogId = "log";
+
+	private static readonly IReadOnlyList<string> SwitchOptions = ["On", "Off"];
+
+	/// <summary>The Home Assistant area id in the URL.</summary>
+	[Parameter]
+	public string AreaId { get; set; } = "";
+
+	private RoomPageModel _model = default!;
+
+	// Which folds are open. The temperatures start open; the rest start closed.
+	private readonly HashSet<string> _open = [LevelsId, ModesId, SwitchedId];
+
+	protected override void OnInitialized()
+	{
+		_model = new RoomPageModel(Engine, Catalog, Areas, Store, Stamps, Activity, Household.Zone, Logger, work => InvokeAsync(work));
+		_model.Changed += StateHasChanged;
+		_model.Navigated += Leave;
+		_model.Start();
+	}
+
+	private void Leave(string href) => Nav.NavigateTo(href);
+
+	protected override void OnParametersSet() => _model.Show(AreaId);
+
+	private async Task ConfirmLeave(LocationChangingContext context)
+	{
+		if (_model.HasRefusedEdit
+			&& !await Js.InvokeAsync<bool>("confirm", RoomPageModel.LeaveQuestion))
+			context.PreventNavigation();
+	}
+
+	private bool IsOpen(string id) => _open.Contains(id);
+
+	private void SetOpen(string id, bool open)
+	{
+		if (open)
+			_open.Add(id);
+		else
+			_open.Remove(id);
+	}
+
+	private IReadOnlyList<SectionIndex.Item> IndexItems =>
+	[
+		.. _model.ShowLevelsCard
+			? new SectionIndex.Item[]
+			{
+				new(LevelsId, "Temperature", _model.OwnPeriodCount > 0 ? _model.OwnPeriodCount : null),
+				new(ModesId, "Away and boost")
+			}
+			: [new SectionIndex.Item(SwitchedId, "On or off by mode")],
+		new SectionIndex.Item(SettingsId, "This room's settings"),
+		new SectionIndex.Item(SensorsId, "Heaters and sensors"),
+		new SectionIndex.Item(LearntId, Words["Learnt"]),
+		new SectionIndex.Item(IdentityId, "This room"),
+		new SectionIndex.Item(LogId, "What happened here")
+	];
+
+	private string SwitchedSummary =>
+		string.Join(" · ", RoomPageModel.Modes.Where(_model.SwitchedOnIn).Select(ModeName)) is { Length: > 0 } on ? $"on: {on}" : "off in every mode";
+
+	private static string ModeName(HeatingMode mode) => mode switch
+	{
+		HeatingMode.Away => "Away",
+		HeatingMode.Night => "Night",
+		HeatingMode.Home => "Home",
+		_ => "Boost"
+	};
+
+	private static string ModeHelp(HeatingMode mode) => mode switch
+	{
+		HeatingMode.Away => "On keeps the heater's own dial as frost protection while the house is away.",
+		HeatingMode.Night => "Whether the heaters run at night.",
+		HeatingMode.Home => "Whether the heaters run while somebody is home.",
+		_ => "Whether the heaters run during boost."
+	};
+
+	private void SetSwitched(HeatingMode mode, bool on) => _model.SetSwitchedOn(mode, on);
+
+	private string ModesSummary =>
+		$"{Celsius(_model.AwayTemperature)} away · {Celsius(_model.BoostTemperature)} boost";
+
+	private static string Celsius(double? value) =>
+		value is { } celsius ? $"{celsius.ToString("0.#", CultureInfo.CurrentCulture)} °C" : "not set";
+
+	private static string Swatch(double celsius) => $"--lvl-temp: {TemperatureColour.Css(celsius)}";
+
+	// None declares a step: each is fitted from measurements, and a step of a thousandth made the browser mark a
+	// fitted 0.0072 invalid.
+	private IEnumerable<(LearntKind Kind, LearntNumber Number, string Unit, double Max)> Numbers(RoomLearntNumbers learnt) =>
+	[
+		(LearntKind.WarmingRate, learnt.WarmingRate, Words["UnitDegreesPerHour"], 20),
+		(LearntKind.OutdoorTerm, learnt.OutdoorTerm, Words["UnitPerDegree"], 0.5),
+		(LearntKind.Band, learnt.Band, "°C", 5)
+	];
+
+	private string LearntLabel(LearntKind kind) => kind switch
+	{
+		LearntKind.WarmingRate => Words["WarmingRate"],
+		LearntKind.OutdoorTerm => Words["OutdoorTerm"],
+		_ => Words["Band"]
+	};
+
+	private static string LearntHelpKey(LearntKind kind) => kind switch
+	{
+		LearntKind.WarmingRate => "WarmingRateHelp",
+		LearntKind.OutdoorTerm => "OutdoorTermHelp",
+		_ => "BandHelp"
+	};
+
+	// A number resting on no measurements says so instead of showing a confident figure.
+	private string LearntValue(LearntNumber number, string unit) =>
+		number.Measured ? $"{InvariantNumber.Format(number.Value, 3)} {unit}" : Words["NotMeasured"];
+
+	private string RestingOn(LearntNumber number) =>
+		string.Format(CultureInfo.CurrentCulture, Words["RestingOn"].Value, number.MeasurementCount);
+
+	private string LearntSummary(RoomLearntNumbers learnt) => LearntValue(learnt.WarmingRate, Words["UnitDegreesPerHour"]);
+
+	// Opens the target fold and scrolls it into view; the fold's own id is already on its <section>.
+	private async Task JumpTo(string id)
+	{
+		SetOpen(id, true);
+		await Js.InvokeVoidAsync("eval", $"document.getElementById('{id}')?.scrollIntoView({{behavior:'smooth',block:'start'}})");
+	}
+
+	public void Dispose()
+	{
+		_model.Changed -= StateHasChanged;
+		_model.Navigated -= Leave;
+		_model.Dispose();
+	}
+}

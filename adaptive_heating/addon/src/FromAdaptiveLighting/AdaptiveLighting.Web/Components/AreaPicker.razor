@@ -1,0 +1,110 @@
+@namespace Adaptive.UI
+@* Chosen by display name and stored as the registry slug: AreaId is "stue" while Home Assistant shows "Stue"
+   everywhere, so typing the displayed value gives a room that never heats. *@
+
+<div class="picker">
+	@if (_manual || !HasOptions)
+	{
+		<input type="text"
+			   id="@Id"
+			   class="picker-text"
+			   placeholder="area id, e.g. stue"
+			   value="@Value"
+			   @onchange="OnTyped" />
+	}
+	else
+	{
+		<select id="@Id" class="picker-select" @bind:get="Value ?? string.Empty" @bind:set="OnPicked">
+			@if (!Required)
+			{
+				<option value="">@NoneLabel</option>
+			}
+			@foreach (AreaOption area in Areas)
+			{
+				<option value="@area.Id">@area.Label</option>
+			}
+			@if (IsUnlisted)
+			{
+				<option value="@Value">@Value — not a registry area id</option>
+			}
+		</select>
+	}
+
+	<button type="button" class="picker-mode" @onclick="ToggleMode" disabled="@(!HasOptions)">
+		@(_manual ? "Pick from list" : "Type an id")
+	</button>
+
+	@if (!HasOptions)
+	{
+		<span class="picker-note">@EmptyNote</span>
+	}
+	else if (IsUnlisted)
+	{
+		<span class="picker-note bad">Not a registry area id.</span>
+	}
+	else if (Selected is { HasHeaters: false })
+	{
+		<span class="picker-note bad info-host">
+			<span class="info-line">
+				No heater here
+				<InfoPopover Label="No heater" Severity="InfoSeverity.Bad">
+					No heater found in this room, so it can't run. Assign heaters to the area in Home Assistant, or pick
+					them by hand on the room's page.
+				</InfoPopover>
+			</span>
+		</span>
+	}
+</div>
+
+@code {
+	/// <summary>The id of the text box or list, for a label's for attribute.</summary>
+	[Parameter]
+	public string? Id { get; set; }
+
+	[Parameter]
+	public string? Value { get; set; }
+
+	[Parameter]
+	public EventCallback<string?> ValueChanged { get; set; }
+
+	[Parameter]
+	public IReadOnlyList<AreaOption> Areas { get; set; } = [];
+
+	[Parameter]
+	public string NoneLabel { get; set; } = "(none — list entities by hand)";
+
+	/// <summary>Why there is nothing to pick, worded so it never blames the connection: a disconnected Home
+	/// Assistant and a house with no areas look the same here.</summary>
+	[Parameter]
+	public string EmptyNote { get; set; } = "No areas — type an area id";
+
+	/// <summary>No empty choice: a room always has an area, so a cleared box keeps the area it had.</summary>
+	[Parameter]
+	public bool Required { get; set; }
+
+	private bool _manual;
+
+	private bool HasOptions => Areas.Count > 0;
+
+	private AreaOption? Selected =>
+		Value is { Length: > 0 } ? Areas.FirstOrDefault(area => string.Equals(area.Id, Value, StringComparison.Ordinal)) : null;
+
+	private bool IsUnlisted =>
+		Value is { Length: > 0 } && !Areas.Any(area => string.Equals(area.Id, Value, StringComparison.Ordinal));
+
+	private Task OnPicked(string picked) => Commit(picked);
+
+	private Task OnTyped(ChangeEventArgs args) => Commit(args.Value as string);
+
+	private void ToggleMode() => _manual = !_manual;
+
+	private Task Commit(string? raw)
+	{
+		string? value = string.IsNullOrWhiteSpace(raw) ? null : raw.Trim();
+		if (value is null && Required)
+			return Task.CompletedTask;
+
+		Value = value;
+		return ValueChanged.InvokeAsync(value);
+	}
+}

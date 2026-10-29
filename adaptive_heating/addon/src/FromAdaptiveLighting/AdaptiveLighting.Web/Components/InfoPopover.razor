@@ -1,0 +1,49 @@
+@* A button and not a hover title, so a phone and a keyboard both reach it. Plain CSS, no script: nothing for
+   the CSP to refuse. *@
+
+<span class="info" @onkeydown="OnKeyDown">
+	<button type="button"
+			class="info-icon @InfoSeverityClass.Of(Severity)"
+			aria-expanded="@(_open ? "true" : "false")"
+			aria-label="@($"More about {Label}")"
+			title="@($"More about {Label}")"
+			@onclick="Toggle">i</button>
+
+	@if (_open)
+	{
+		@* Never put this component inside a <label>: a click in a label is forwarded to the (i) button and reopens the panel. *@
+		<span class="info-scrim" aria-hidden="true" @onclick="Close"></span>
+
+		<span class="info-panel" role="note">
+			<span class="info-title">@Label</span>
+			<span class="info-body">@ChildContent</span>
+			<button type="button" class="info-close" @onclick="Toggle">Close</button>
+		</span>
+	}
+</span>
+
+@code {
+	/// <summary>What the icon explains. Titles the panel and names the icon for a screen reader.</summary>
+	[Parameter, EditorRequired]
+	public string Label { get; set; } = "";
+
+	[Parameter, EditorRequired]
+	public RenderFragment? ChildContent { get; set; }
+
+	/// <summary>The icon's colour: neutral help, yellow worth knowing, red needs attention.</summary>
+	[Parameter]
+	public InfoSeverity Severity { get; set; }
+
+	private bool _open;
+
+	private void Toggle() => _open = !_open;
+
+	/// <summary>Shuts the panel; separate from <see cref="Toggle"/> because a scrim wired to the toggle would reopen it.</summary>
+	private void Close() => _open = false;
+
+	private void OnKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs args)
+	{
+		if (args.Key == "Escape")
+			_open = false;
+	}
+}

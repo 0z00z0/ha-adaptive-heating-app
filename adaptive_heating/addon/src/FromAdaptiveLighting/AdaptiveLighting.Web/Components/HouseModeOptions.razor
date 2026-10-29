@@ -1,0 +1,580 @@
+@namespace Adaptive.UI
+@* Rows come from the select's live options; a configured value the helper no longer offers is still shown,
+   with a remove control. One option is the reset target; when none is Normal, the first stands in. *@
+
+<div class="housemode-options">
+	@if (DisplayValues.Count == 0)
+	{
+		<div class="empty">
+			@if (IsReady)
+			{
+				<text>No options yet</text>
+			}
+			else
+			{
+				<text>Waiting for Home Assistant</text>
+			}
+		</div>
+	}
+	else
+	{
+		@if (NoNormalOption)
+		{
+			<div class="notice warn housemode-note info-host">
+				<span class="info-line">
+					<strong>No Normal option</strong>
+					<InfoPopover Label="No Normal option" Severity="InfoSeverity.Warn">
+						No option is marked Normal, so the house has nothing to switch back to. Mark one option Normal.
+					</InfoPopover>
+				</span>
+			</div>
+		}
+
+		@foreach (string value in DisplayValues)
+		{
+			string current = value;
+			HouseModeOptionConfig? option = Find(current);
+			ModeKind kind = option?.Kind ?? ModeKind.Normal;
+			bool isLive = IsLive(current);
+			bool isActive = IsActive(current);
+			string group = $"kind-{current}";
+
+			@* Uncontrolled fold: no open attribute, so Blazor's diff never fights a fold toggled by hand. *@
+			<details class="panel housemode-fold @(isLive ? "" : "orphan") @(isActive ? "active" : "")" @key="current">
+				<summary class="housemode-summary">
+					<span class="housemode-summary-value">@current</span>
+					@if (isActive)
+					{
+						<span class="badge active-now" title="The house is in this mode right now.">active now</span>
+					}
+					@if (IsResetTarget(option))
+					{
+						<span class="badge ok" title="This option is the reset target.">Normal — reset target</span>
+					}
+					else if (kind == ModeKind.Normal && option is not null)
+					{
+						@* Normal but not the reset target: the engine takes the first Normal option. *@
+						<span class="badge warn" title="Only the first Normal option is the reset target; this one has no behaviour of its own.">Normal — not the target</span>
+					}
+					else
+					{
+						<span class="badge housemode-summary-kind">@KindName(kind)</span>
+					}
+					@if (!isLive)
+					{
+						<HelperOrphanBadge />
+						@if (UnmappedLiveValues.Count > 0)
+						{
+							@* stopPropagation on a control inside a summary, or opening it toggles the fold under it. *@
+							<select class="cell" value="" @onclick:stopPropagation="true"
+									@onchange="@(args => Remap(current, args.Value as string))">
+								<option value="">move it to&hellip;</option>
+								@foreach (string free in UnmappedLiveValues)
+								{
+									<option value="@free">@free</option>
+								}
+							</select>
+						}
+						<button type="button" class="danger" @onclick="() => Remove(current)" @onclick:stopPropagation="true">Remove</button>
+					}
+					<span class="housemode-summary-hint">@SummaryHint(option, kind)</span>
+					<span class="area-chevron" aria-hidden="true"></span>
+				</summary>
+
+				<div class="housemode-kinds">
+					<span class="housemode-field-label">
+						What this option means
+						<InfoPopover Label="What this option means">
+							<strong>Normal</strong> is everyday heating and the option every reset returns to.
+							<strong>Sleep</strong> holds every room at or below one period's temperature.
+							<strong>Away</strong> and <strong>Planned to arrive</strong> hold every room at its away temperature.
+							<strong>Boost</strong> holds every room at its boost temperature.
+							<strong>On the way</strong> and <strong>Temporarily away</strong> follow the periods, as
+							Normal does. <strong>Guest</strong> leaves every room exactly as it is. Picking one shows
+							only that kind's settings and clears the others.
+						</InfoPopover>
+					</span>
+					@foreach (ModeKind choice in Kinds)
+					{
+						<label class="housemode-kind">
+							<input type="radio" name="@group" checked="@(kind == choice)"
+								   @onchange="() => SetKind(current, choice)" />
+							@KindName(choice)
+						</label>
+					}
+				</div>
+
+				@if (kind != ModeKind.Normal)
+				{
+					HouseModeOptionConfig boundOption = option!;
+					<div class="housemode-sub">
+						@if (kind == ModeKind.Sleep)
+						{
+							<div class="housemode-field">
+								<span class="housemode-field-label">
+									Hold rooms at or below this period
+									<InfoPopover Label="Hold rooms at or below this period">
+										While the house is in this mode, no room is warmer than its temperature for this
+										period. Left on the default it picks the period that switches this mode on, or one
+										named "night".
+									</InfoPopover>
+								</span>
+								<select class="cell wide" @bind:get="boundOption.ClampPeriodId ?? string.Empty"
+										@bind:set="@(v => SetField(boundOption, () => boundOption.ClampPeriodId = Blank(v)))">
+									<option value="">@ClampDefaultLabel(boundOption)</option>
+									@foreach (TimePeriodConfig period in Periods)
+									{
+										<option value="@period.Key">@PeriodName(period)</option>
+									}
+									@if (boundOption.ClampPeriodId is { Length: > 0 } clamp && Periods.ByKey(clamp) is null)
+									{
+										<option value="@clamp">@clamp — no such period</option>
+									}
+								</select>
+							</div>
+
+							<div class="housemode-field">
+								<span class="housemode-field-label">
+									<label class="housemode-check">
+										<input type="checkbox" checked="@boundOption.NightSetback"
+											   @onchange="args => SetField(boundOption, () => boundOption.NightSetback = args.Value is true)" />
+										Night setback
+									</label>
+									<InfoPopover Label="Night setback">
+										While the house is in this mode, every room with night setback switched on on its own page is
+										lowered as far as saves the most power, and heated again in time for the next period's start.
+									</InfoPopover>
+								</span>
+							</div>
+						}
+
+						<div class="housemode-field">
+							<span class="housemode-field-label">
+								Turn this mode on while …
+								<InfoPopover Label="Turn this mode on while …">
+									While any of these is on, the house is in this mode whatever the dropdown says — a bedside
+									sleep toggle, a "guests over" switch. The dropdown itself is never changed; turning them
+									all off hands control straight back to it.
+								</InfoPopover>
+							</span>
+							<EntityListPicker Value="@boundOption.ActivateWhileOn"
+											  ValueChanged="@(v => SetField(boundOption, () => boundOption.ActivateWhileOn = [.. v]))"
+											  Options="@ActivationEntities"
+											  Lookup="@Lookup"
+											  EmptyLabel="(none — only the dropdown activates this mode)"
+											  AddLabel="Add a switch or sensor…"
+											  EmptyNote="@EmptyNote("No switches or sensors — type an id")"
+											  Placeholder="input_boolean.sover" />
+							@if (HomeAssistantDecides)
+							{
+								<span class="mode-dormant info-host">
+									<span class="info-line">
+										not in force
+										<InfoPopover Label="Not in force" Severity="InfoSeverity.Warn">Home Assistant owns the house mode, so nothing here switches it. Whatever is listed is kept, and takes over again the moment the mode is handed back.</InfoPopover>
+									</span>
+								</span>
+							}
+						</div>
+
+						<div class="housemode-field">
+							@* The (i) is a sibling of the label, never inside it: a click on the popover's own text is
+							   forwarded to the first labelable element in a label, which here would toggle the box. *@
+							<span class="housemode-field-label">
+								<label class="housemode-check">
+									<input type="checkbox" checked="@(boundOption.ActivateAfterNoMotionMinutes is > 0)"
+										   @onchange="args => ToggleNoMotion(boundOption, args.Value is true)" />
+									Switch to this mode after no movement for
+								</label>
+								<InfoPopover Label="Switch to this mode after no movement for">
+									With no motion anywhere in the house for this long, the house switches itself to this mode
+									— an auto-away. Every room's motion sensors count. Pair it with the presence reset below,
+									or the house stays in this mode until somebody changes it by hand.
+								</InfoPopover>
+							</span>
+							@if (HomeAssistantDecides)
+							{
+								<span class="mode-dormant info-host">
+									<span class="info-line">
+										not in force
+										<InfoPopover Label="Not in force" Severity="InfoSeverity.Warn">Home Assistant owns the house mode, so an idle house is never switched by the engine. The setting is kept for when the mode is handed back.</InfoPopover>
+									</span>
+								</span>
+							}
+							@if (boundOption.ActivateAfterNoMotionMinutes is > 0)
+							{
+								<div class="housemode-grace">
+									<input class="cell num" type="number" min="0" value="@NoMotionHours(boundOption)"
+										   @onchange="args => SetNoMotionHours(boundOption, args.Value as string)" />
+									<span class="unit">h</span>
+									<input class="cell num" type="number" min="0" max="59" value="@NoMotionMinutes(boundOption)"
+										   @onchange="args => SetNoMotionMinutes(boundOption, args.Value as string)" />
+									<span class="unit">min</span>
+								</div>
+							}
+						</div>
+
+						<div class="housemode-resets">
+							<span class="housemode-resets-head">
+								Reset triggers
+								<InfoPopover Label="Reset triggers">
+									What switches the house back to the Normal option. Set as many as you like; the first to
+									happen wins. Set none and the house stays in this mode until somebody changes it by hand.
+								</InfoPopover>
+							</span>
+
+							@if (HomeAssistantDecides)
+							{
+								<span class="mode-dormant info-host">
+									<span class="info-line">
+										not in force
+										<InfoPopover Label="Not in force" Severity="InfoSeverity.Warn">A reset puts the dropdown back to Normal, and Home Assistant owns the dropdown. Whatever is set here is kept for when the mode is handed back.</InfoPopover>
+									</span>
+								</span>
+							}
+
+							<div class="housemode-field">
+								<span class="housemode-field-label">Reset when this period starts</span>
+								<select class="cell wide" @bind:get="boundOption.ResetOnPeriodStartId ?? string.Empty"
+										@bind:set="@(v => SetField(boundOption, () => boundOption.ResetOnPeriodStartId = Blank(v)))">
+									<option value="">(none)</option>
+									@foreach (TimePeriodConfig period in Periods)
+									{
+										<option value="@period.Key">@PeriodName(period)</option>
+									}
+									@if (boundOption.ResetOnPeriodStartId is { Length: > 0 } rp && Periods.ByKey(rp) is null)
+									{
+										<option value="@rp">@rp — no such period</option>
+									}
+								</select>
+							</div>
+
+							<div class="housemode-field">
+								@* The (i) is a sibling of the label, never inside it: a click on the popover's own text is
+								   forwarded to the first labelable element in a label, which here would toggle the box. *@
+								<span class="housemode-field-label">
+									<label class="housemode-check">
+										<input type="checkbox" checked="@boundOption.ResetOnPresence"
+											   @onchange="args => SetField(boundOption, () => boundOption.ResetOnPresence = args.Value is true)" />
+										Reset when somebody is detected
+									</label>
+									<InfoPopover Label="Reset when somebody is detected">
+										Movement, or a person coming home, switches the house back to Normal. The grace is how
+										long after the mode starts arrivals are ignored, so walking out of the door does not
+										cancel the mode you just set. Leave the sensor list empty to watch every room's motion.
+									</InfoPopover>
+								</span>
+								@if (boundOption.ResetOnPresence)
+								{
+									<div class="housemode-presence">
+										<EntityListPicker Value="@boundOption.ResetPresenceSensors"
+														  ValueChanged="@(v => SetField(boundOption, () => boundOption.ResetPresenceSensors = [.. v]))"
+														  Options="@PresenceSensors"
+														  Lookup="@Lookup"
+														  EmptyLabel="(default — every room's motion sensors)"
+														  AddLabel="Add a sensor…"
+														  EmptyNote="@EmptyNote("No motion sensors — type an id")"
+														  Placeholder="binary_sensor.gang_bevegelse" />
+										<div class="housemode-grace">
+											<span class="hint">ignore arrivals for</span>
+											<input class="cell num" type="number" min="0" value="@boundOption.ResetPresenceGraceMinutes"
+												   @onchange="args => SetGrace(boundOption, args.Value as string)" />
+											<span class="unit">min</span>
+										</div>
+									</div>
+								}
+							</div>
+
+						</div>
+					</div>
+				}
+			</details>
+		}
+	}
+</div>
+
+@code {
+	private static readonly ModeKind[] Kinds =
+	[
+		ModeKind.Normal, ModeKind.Sleep, ModeKind.Away, ModeKind.Boost,
+		ModeKind.PlannedToArrive, ModeKind.OnTheWay, ModeKind.TemporarilyAway, ModeKind.Guest
+	];
+
+	/// <summary>The house-mode config whose Options list this component edits in place.</summary>
+	[Parameter, EditorRequired]
+	public HouseModeConfig HouseMode { get; set; } = new();
+
+	/// <summary>The select's live option values. Empty when Home Assistant is not connected.</summary>
+	[Parameter]
+	public IReadOnlyList<string> LiveOptions { get; set; } = [];
+
+	/// <summary>The option the select currently stands on, or <c>null</c> when unknown.</summary>
+	[Parameter]
+	public string? ActiveValue { get; set; }
+
+	[Parameter]
+	public IReadOnlyList<TimePeriodConfig> Periods { get; set; } = [];
+
+	/// <summary>The presence sensors (motion <c>binary_sensor</c>s ∪ <c>person.*</c>) for the presence override picker.</summary>
+	[Parameter]
+	public IReadOnlyList<EntityOption> PresenceSensors { get; set; } = [];
+
+	[Parameter]
+	public IReadOnlyList<EntityOption> DateTimes { get; set; } = [];
+
+	/// <summary><c>input_boolean.*</c>, <c>switch.*</c> and <c>binary_sensor.*</c>, for the "turn on while" picker.</summary>
+	[Parameter]
+	public IReadOnlyList<EntityOption> ActivationEntities { get; set; } = [];
+
+	/// <summary>What an id is called and whether Home Assistant knows it, handed on to every picker here.</summary>
+	[Parameter]
+	public EntityLookup? Lookup { get; set; }
+
+	/// <summary>Whether Home Assistant is answering, so an empty list can say which of the two it is.</summary>
+	[Parameter]
+	public bool IsReady { get; set; } = true;
+
+	/// <summary>Whether Home Assistant owns the house mode, so the engine's own ways of setting it are dormant.</summary>
+	// The page asks ModeAuthority, never the enum: an authority naming no entity stands nothing down.
+	[Parameter]
+	public bool HomeAssistantDecides { get; set; }
+
+	/// <summary>Raised after any change, so the page can re-validate.</summary>
+	[Parameter]
+	public EventCallback Changed { get; set; }
+
+	private static string PeriodName(TimePeriodConfig period) =>
+		period.Name is { Length: > 0 } name ? name : "unnamed period";
+
+	/// <summary>Whether no configured option is Normal, so the first displayed value stands in as the reset target.</summary>
+	private bool NoNormalOption =>
+		DisplayValues.Count > 0 && !HouseMode.Options.Any(o => o.Kind == ModeKind.Normal);
+
+	// Reference equality, not Kind == Normal: ModeKind defaults to Normal, so every option adopted from the
+	// helper claims to be the reset target while the engine takes the first.
+	private bool IsResetTarget(HouseModeOptionConfig? option) =>
+		option is not null && ReferenceEquals(option, HouseMode.NormalOption);
+
+	// One reconciliation for both helpers; HelperOptions carries the unanswered-connection rule and its tests.
+	private HelperOptions Helper =>
+		HelperOptions.Reconcile(LiveOptions, HouseMode.Options.Select(option => option.Value), ActiveValue);
+
+	/// <summary>The values to render: the live options first, then any configured value HA no longer offers.</summary>
+	private IReadOnlyList<string> DisplayValues => Helper.Display;
+
+	private bool IsLive(string value) => Helper.IsLive(value);
+
+	private bool IsActive(string value) => Helper.IsActive(value);
+
+	/// <summary>The collapsed header's hint: the option's key settings at a glance.</summary>
+	private string SummaryHint(HouseModeOptionConfig? option, ModeKind kind)
+	{
+		if (option is null)
+			return string.Empty;
+
+		List<string> parts = new List<string>(5);
+
+		if (kind == ModeKind.Sleep)
+		{
+			TimePeriodConfig? clamp = HouseModeConfig.SleepClampPeriodFor(option, [.. Periods]);
+			parts.Add(clamp is not null ? $"at most {PeriodName(clamp)}" : "no upper limit");
+
+			if (option.NightSetback)
+				parts.Add("night setback");
+		}
+
+		// Both of these are dormant under Home Assistant's authority, and a collapsed fold is where a mode's
+		// effect is read without opening the field that says so.
+		string dormant = HomeAssistantDecides ? "dormant: " : "";
+
+		if (option.ActivateWhileOn.Count is > 0 and int on)
+			parts.Add($"{dormant}on while {on} {(on == 1 ? "entity" : "entities")} on");
+
+		if (option.ActivateAfterNoMotionMinutes is > 0 and int idle)
+			parts.Add($"{dormant}auto after {FormatIdle(idle)} idle");
+
+		int resets = ResetTriggerCount(option);
+		if (resets > 0)
+			parts.Add($"{dormant}{resets} reset trigger{(resets == 1 ? "" : "s")}");
+
+		return string.Join(" · ", parts);
+	}
+
+	/// <summary>A no-motion window as "6h" / "90m" / "1h 30m".</summary>
+	private static string FormatIdle(int minutes)
+	{
+		int hours = minutes / 60, rest = minutes % 60;
+		return hours > 0 && rest > 0 ? $"{hours}h {rest}m" : hours > 0 ? $"{hours}h" : $"{rest}m";
+	}
+
+	private static int ResetTriggerCount(HouseModeOptionConfig option) =>
+		(option.ResetOnPeriodStartId is { Length: > 0 } ? 1 : 0) + (option.ResetOnPresence ? 1 : 0);
+
+	private HouseModeOptionConfig? Find(string value) =>
+		HouseMode.Options.FirstOrDefault(option => option.Value.SameName(value));
+
+	/// <summary>The empty-clamp label: the period the fallback chain resolves to when no explicit clamp is set.</summary>
+	private string ClampDefaultLabel(HouseModeOptionConfig option)
+	{
+		// Carries the option's Id, so the "a period switches to this option" link still resolves, and no explicit
+		// clamp, so the fallback is what shows.
+		HouseModeOptionConfig probe = new HouseModeOptionConfig { Id = option.Id, Value = option.Value };
+		TimePeriodConfig? resolved = HouseModeConfig.SleepClampPeriodFor(probe, [.. Periods]);
+		return resolved is not null
+			? $"(default: {PeriodName(resolved)})"
+			: "(default: none found — name a period)";
+	}
+
+	/// <summary>The empty-picker note, worded by whether Home Assistant is answering.</summary>
+	private string EmptyNote(string noneYet) => IsReady
+		? noneYet
+		: "Waiting for Home Assistant — type an id";
+
+	private async Task SetKind(string value, ModeKind kind)
+	{
+		HouseModeOptionConfig? option = Find(value);
+
+		if (option is null)
+		{
+			option = new HouseModeOptionConfig { Value = value };
+			HouseMode.Options.Add(option);
+		}
+
+		option.Kind = kind;
+
+		// The clamp and reset triggers are cleared so the document carries no inert fields the validator would warn about.
+		if (kind == ModeKind.Normal)
+		{
+			option.ClampPeriodId = null;
+			option.NightSetback = false;
+			option.ResetOnPeriodStartId = null;
+			option.ResetOnPresence = false;
+			option.ResetPresenceSensors = [];
+			option.ActivateWhileOn = [];
+			option.ActivateAfterNoMotionMinutes = null;
+
+			// One Normal reset target at a time. A pure-Normal row carries nothing but its value, so a still-live
+			// one dropped here reverts to the implicit-Normal display.
+			HouseMode.Options.RemoveAll(other => !ReferenceEquals(other, option) && other.Kind == ModeKind.Normal);
+		}
+
+		// Options stays in displayed order, so "the first Normal" here means the same row NormalOption resolves to.
+		Reorder();
+
+		EnsureNormalTarget();
+
+		await Changed.InvokeAsync().ConfigureAwait(false);
+	}
+
+	private async Task SetField(HouseModeOptionConfig option, Action mutate)
+	{
+		mutate();
+		await Changed.InvokeAsync().ConfigureAwait(false);
+	}
+
+	private Task SetGrace(HouseModeOptionConfig option, string? raw) =>
+		SetField(option, () =>
+		{
+			if (int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out int minutes))
+				option.ResetPresenceGraceMinutes = Math.Max(0, minutes);
+		});
+
+	private const int DefaultNoMotionMinutes = 360;
+
+	private static int NoMotionHours(HouseModeOptionConfig option) => (option.ActivateAfterNoMotionMinutes ?? 0) / 60;
+
+	private static int NoMotionMinutes(HouseModeOptionConfig option) => (option.ActivateAfterNoMotionMinutes ?? 0) % 60;
+
+	private Task ToggleNoMotion(HouseModeOptionConfig option, bool on) =>
+		SetField(option, () => option.ActivateAfterNoMotionMinutes = on ? DefaultNoMotionMinutes : null);
+
+	private Task SetNoMotionHours(HouseModeOptionConfig option, string? raw) =>
+		SetField(option, () => option.ActivateAfterNoMotionMinutes = ComposeMinutes(ParseNonNegative(raw), NoMotionMinutes(option)));
+
+	private Task SetNoMotionMinutes(HouseModeOptionConfig option, string? raw) =>
+		SetField(option, () => option.ActivateAfterNoMotionMinutes = ComposeMinutes(NoMotionHours(option), Math.Clamp(ParseNonNegative(raw), 0, 59)));
+
+	/// <summary>Floors a 0:00 entry to one minute; the validator only accepts a positive total.</summary>
+	private static int ComposeMinutes(int hours, int minutes) => Math.Max(1, hours * 60 + minutes);
+
+	private static int ParseNonNegative(string? raw) =>
+		int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out int value) ? Math.Max(0, value) : 0;
+
+	private async Task Remove(string value)
+	{
+		HouseMode.Options.RemoveAll(option => option.Value.SameName(value));
+		EnsureNormalTarget();
+		await Changed.InvokeAsync().ConfigureAwait(false);
+	}
+
+	/// <summary>Live options nothing is stored against: what an orphan can be moved onto in one pick.</summary>
+	private IReadOnlyList<string> UnmappedLiveValues => Helper.Unmapped;
+
+	/// <summary>Re-points an orphaned option at a live one, keeping everything the row carries.</summary>
+	/// <remarks>Only ever offered an unmapped value, so it cannot collide with an option that already exists.</remarks>
+	private async Task Remap(string orphanValue, string? live)
+	{
+		if (live?.Trim() is not { Length: > 0 } target || Find(orphanValue) is not { } option)
+			return;
+
+		option.Value = target;
+		Reorder();
+		await Changed.InvokeAsync().ConfigureAwait(false);
+	}
+
+	/// <summary>Stores an explicit Normal row once any option is classified, so the reset target is on disk.</summary>
+	private void EnsureNormalTarget()
+	{
+		IReadOnlyList<string> values = DisplayValues;
+
+		// A fresh document with nothing classified keeps its implicit-Normal state; it is not force-populated.
+		bool hasNormal = HouseMode.Options.Any(o => o.Kind == ModeKind.Normal);
+		bool hasClassified = HouseMode.Options.Any(o => o.Kind != ModeKind.Normal);
+		if (values.Count == 0 || hasNormal || !hasClassified)
+			return;
+
+		string? target = values.FirstOrDefault(value => Find(value) is null);
+		if (target is not null)
+		{
+			HouseMode.Options.Add(new HouseModeOptionConfig { Value = target, Kind = ModeKind.Normal });
+			Reorder();
+		}
+	}
+
+	/// <summary>Reorders the stored options to follow the displayed order; orphans keep their trailing position.</summary>
+	// OrderBy is stable and List.Sort is not. Orphans all rank int.MaxValue, so an unstable sort could swap two
+	// of them on an unrelated edit and rebind an in-progress edit to another row.
+	private void Reorder()
+	{
+		IReadOnlyList<string> order = DisplayValues;
+
+		int Rank(HouseModeOptionConfig option)
+		{
+			// Not FindIndex: order is the shared reconciliation's list, which is read-only by design.
+			int index = 0;
+			foreach (string value in order)
+			{
+				if (value.SameName(option.Value))
+					return index;
+
+				index++;
+			}
+
+			return int.MaxValue;
+		}
+
+		List<HouseModeOptionConfig> sorted = HouseMode.Options.OrderBy(Rank).ToList();
+		HouseMode.Options.Clear();
+		HouseMode.Options.AddRange(sorted);
+	}
+
+	// The enum's own names run words together.
+	private static string KindName(ModeKind kind) => kind switch
+	{
+		ModeKind.PlannedToArrive => "Planned to arrive",
+		ModeKind.OnTheWay => "On the way",
+		ModeKind.TemporarilyAway => "Temporarily away",
+		_ => kind.ToString()
+	};
+
+	private static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+}

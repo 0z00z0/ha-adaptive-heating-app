@@ -1,0 +1,145 @@
+@* The wrapper .tok-host must stay position: relative. A popover anchored to a container that is not a
+   positioning context lands in the page's bottom-left corner. *@
+
+@if (!Editable || !Token.Editable)
+{
+	@if (!Editable)
+	{
+		<b class="tok-static">@Token.Text</b>
+	}
+	else
+	{
+		<span class="tok tok-fixed" title="@($"{Token.Label} — fixed here")">
+			@Token.Text
+			@if (Token.Origin == TokenOrigin.Own)
+			{
+				<span class="tok-own-dot" aria-hidden="true"></span>
+			}
+		</span>
+	}
+}
+else
+{
+	<span class="tok-host" @onkeydown="OnKeyDown">
+		<button type="button"
+				class="tok"
+				aria-expanded="@(_open ? "true" : "false")"
+				aria-label="@AccessibleName"
+				title="@HoverTitle"
+				@onclick="OnActivate">
+			@Token.Text
+			@if (Token.Origin == TokenOrigin.Own)
+			{
+				<span class="tok-own-dot" aria-hidden="true"></span>
+			}
+		</button>
+
+		@if (_open)
+		{
+			<span class="tok-pop" role="listbox" aria-label="@Token.Label">
+				@foreach (TokenChoice choice in Token.Choices)
+				{
+					<button type="button"
+							class="@(IsCurrent(choice) ? "cur" : null)"
+							role="option"
+							aria-selected="@(IsCurrent(choice) ? "true" : "false")"
+							@onclick="() => Pick(choice)">@choice.Text</button>
+				}
+
+				@if (Token.Origin == TokenOrigin.Own && Token.HouseText is { Length: > 0 } house)
+				{
+					<button type="button" class="tok-pop-revert" @onclick="Revert">Use house setting (@house)</button>
+				}
+
+				@if (Note is { Length: > 0 } note)
+				{
+					<span class="tok-pop-note">@note</span>
+				}
+			</span>
+		}
+	</span>
+}
+
+@code {
+	[Parameter, EditorRequired]
+	public SentenceToken Token { get; set; } = default!;
+
+	/// <summary>Whether the surrounding sentence is being edited at all.</summary>
+	[Parameter]
+	public bool Editable { get; set; } = true;
+
+	[Parameter]
+	public EventCallback<SentenceEdit> Edited { get; set; }
+
+	// Separate from Edited: picking the house's current value writes that number into the room, while
+	// reverting clears the property so the room follows the house when the house changes.
+	[Parameter]
+	public EventCallback<string> Reverted { get; set; }
+
+	/// <summary>What the popover says about when a pick takes effect.</summary>
+	[Parameter]
+	public string? Note { get; set; }
+
+	private bool _open;
+
+	/// <summary>Named for a screen reader, which does not get the sentence around it or see the amber dot.</summary>
+	private string AccessibleName =>
+		Token.Origin == TokenOrigin.Own
+			? $"{Token.Label}: {Token.Text}, this room's own setting"
+			: $"{Token.Label}: {Token.Text}";
+
+	private string HoverTitle => Token.Origin switch
+	{
+		TokenOrigin.Own when Token.HouseText is { Length: > 0 } house =>
+			$"{Token.Label} — this room's own setting. The house says {house}.",
+		TokenOrigin.Own => $"{Token.Label} — this room's own setting.",
+		TokenOrigin.Inherited => $"{Token.Label} — following the house setting.",
+		_ => Token.Label
+	};
+
+	private Task OnActivate()
+	{
+		if (Token.Kind == TokenKind.Toggle && Token.Choices.Count == 2)
+			return Flip();
+
+		_open = !_open;
+
+		return Task.CompletedTask;
+	}
+
+	private Task Flip()
+	{
+		TokenChoice next = Token.Choices.First(choice => !IsCurrent(choice));
+
+		return Edited.InvokeAsync(EditFor(next));
+	}
+
+	private Task Pick(TokenChoice choice)
+	{
+		_open = false;
+
+		return Edited.InvokeAsync(EditFor(choice));
+	}
+
+	// An option may answer the question by changing something else: "off" on a lux threshold sets the room to
+	// decide by the sun. The redirect rides on the option, so the page still receives one ordinary edit.
+	private SentenceEdit EditFor(TokenChoice choice) =>
+		new(choice.Key ?? Token.Key, choice.Kind ?? Token.Kind, choice.Value);
+
+	private Task Revert()
+	{
+		_open = false;
+
+		return Reverted.InvokeAsync(Token.Key);
+	}
+
+	// Matched on the formatted words: token and shortlist format the same way, so the written forms match when
+	// the values do.
+	private bool IsCurrent(TokenChoice choice) => string.Equals(choice.Text, Token.Text, StringComparison.Ordinal);
+
+	private void OnKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs args)
+	{
+		if (args.Key == "Escape")
+			_open = false;
+	}
+}

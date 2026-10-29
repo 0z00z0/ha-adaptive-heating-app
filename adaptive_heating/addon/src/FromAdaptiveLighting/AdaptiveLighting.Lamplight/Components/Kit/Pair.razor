@@ -1,0 +1,57 @@
+@* Fully controlled: Word/WordKind come from the page model on every render, so a click never needs to guess
+   what the new state should look like — it only reports which button was pressed. *@
+
+<div class="@CssClass" role="group" aria-label="@Name">
+	@if (ShowStatus)
+	{
+		<span class="pair-name">@Name</span>
+		<span class="word @WordKind">@Word</span>
+	}
+	@if (Help is not null)
+	{
+		<Info Label="@Name">@Help</Info>
+	}
+	<span class="pair-btns">
+		@for (int index = 0; index < Options.Count; index++)
+		{
+			int captured = index;
+			<button type="button" aria-pressed="@(captured == Current ? "true" : "false")" @onclick="() => Select(captured)">@Options[captured]</button>
+		}
+	</span>
+</div>
+
+@code {
+	[Parameter, EditorRequired]
+	public string Name { get; set; } = "";
+
+	[Parameter, EditorRequired]
+	public string Word { get; set; } = "";
+
+	/// <summary>"on", "ok", "off" or "plain" — a CSS <c>word</c> modifier, nothing derived here.</summary>
+	[Parameter, EditorRequired]
+	public string WordKind { get; set; } = "";
+
+	/// <summary>The (i) text. Null gives the pair no (i) at all, rather than an icon that opens on nothing.</summary>
+	[Parameter]
+	public RenderFragment? Help { get; set; }
+
+	[Parameter, EditorRequired]
+	public IReadOnlyList<string> Options { get; set; } = [];
+
+	/// <summary>Index into Options of the pressed button.</summary>
+	[Parameter]
+	public int Current { get; set; }
+
+	/// <summary>Whether the name and the state word are drawn beside the buttons.</summary>
+	/// <remarks>False where the same state is already large on screen; the group keeps its accessible name, so
+	/// only the repetition goes.</remarks>
+	[Parameter]
+	public bool ShowStatus { get; set; } = true;
+
+	[Parameter]
+	public EventCallback<int> OnSelect { get; set; }
+
+	private string CssClass => ShowStatus ? "pair" : "pair pair-bare";
+
+	private Task Select(int index) => OnSelect.InvokeAsync(index);
+}

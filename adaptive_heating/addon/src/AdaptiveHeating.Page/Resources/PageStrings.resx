@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!--
+    Every word the settings page shows. Home Assistant translates an integration's own surfaces and an add-on's
+    configuration options, and translates nothing at all inside a page an add-on serves, so the page carries its
+    own words and picks its own language from what the browser asks for.
+
+    A second language is a file beside this one, named for its culture, with no change to any component.
+    en-GB at the source: colour, behaviour, initialise. An American spelling is a defect wherever it appears.
+    Every label and every status is a few words. What needs explaining goes in a Help entry, behind an icon.
+    Whole words only: no abbreviation, and no text left for a container to clip. A label that does not fit
+    gets a shorter whole word.
+  -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="PageTitle"><value>Heating settings</value></data>
+  <data name="Brand"><value>Adaptive Heating</value></data>
+  <data name="NotFound"><value>Not found</value></data>
+  <data name="NotFoundBody"><value>There is no page at this address.</value></data>
+
+  <data name="Theme"><value>Theme</value></data>
+  <data name="ThemeFollowsDevice"><value>Follow the device</value></data>
+  <data name="NavLabel"><value>Pages</value></data>
+  <data name="NavDashboard"><value>Dashboard</value></data>
+  <data name="NavActivity"><value>Activity</value></data>
+  <data name="NavSettings"><value>Settings</value></data>
+  <data name="GiveFeedback"><value>Give feedback</value></data>
+  <data name="ThemeGroupDark"><value>Dark</value></data>
+  <data name="ThemeGroupLight"><value>Light</value></data>
+  <data name="ThemeWarmCharcoal"><value>Warm charcoal</value></data>
+  <data name="ThemePlumDusk"><value>Plum dusk</value></data>
+  <data name="ThemeBlackout"><value>Blackout</value></data>
+  <data name="ThemeZeroZero"><value>0z0</value></data>
+  <data name="ThemePaper"><value>Paper</value></data>
+  <data name="ThemeFern"><value>Fern</value></data>
+
+  <data name="HouseTitle"><value>House</value></data>
+  <data name="ScheduleTitle"><value>Schedule</value></data>
+  <data name="CalendarsTitle"><value>Calendars</value></data>
+  <data name="HouseModesTitle"><value>House modes</value></data>
+  <data name="CalendarsHelp"><value>Where arrivals are read from, and where finished warm-ups are written down.</value></data>
+  <data name="ArrivalCalendar"><value>Arrivals</value></data>
+  <data name="ArrivalCalendarHelp"><value>Each room is warm at its home temperature by the start of an entry here. Any calendar. An entry with no time is not an arrival.</value></data>
+  <data name="RecordCalendar"><value>Record</value></data>
+  <data name="RecordCalendarHelp"><value>One entry per finished warm-up: room, when, and whether it got there. Local calendars only. An entry cannot be taken out again.</value></data>
+  <data name="NoCalendarChosen"><value>Not chosen</value></data>
+  <data name="NoCalendars"><value>No calendars found</value></data>
+  <data name="NoCalendarsHelp"><value>Home Assistant reports none. Set up a calendar integration there first.</value></data>
+  <data name="NoLocalCalendars"><value>No local calendar</value></data>
+  <data name="NoLocalCalendarsHelp"><value>The record needs one Home Assistant keeps itself. Add a local calendar there.</value></data>
+  <data name="CalendarNotThere"><value>Not in Home Assistant</value></data>
+  <data name="CalendarNotThereHelp"><value>Removed or renamed. Nothing is read from it or written to it.</value></data>
+
+  <data name="Save"><value>Save</value></data>
+  <data name="SaveRefused"><value>Not saved</value></data>
+  <data name="StandingOffThePlan"><value>Rooms set by hand</value></data>
+
+
+
+
+
+  <data name="Learnt"><value>Learnt</value></data>
+  <data name="WarmingRate"><value>Warming rate</value></data>
+  <data name="WarmingRateHelp"><value>How fast the room warms. It decides when a warm-up starts, so it errs slow.</value></data>
+  <data name="OutdoorTerm"><value>Outdoor term</value></data>
+  <data name="OutdoorTermHelp"><value>How much the outdoor temperature raises the duty the room holds at. It errs high.</value></data>
+  <data name="Band"><value>Band</value></data>
+  <data name="BandHelp"><value>How far the room may drift before the heat returns. It errs narrow.</value></data>
+  <data name="NotMeasured"><value>Not measured</value></data>
+  <data name="RestingOn"><value>Resting on {0} measurements.</value></data>
+  <data name="Locked"><value>Set by hand</value></data>
+  <data name="Unlock"><value>Use the system's</value></data>
+  <data name="Reset"><value>Reset</value></data>
+
+  <data name="UnitDegreesPerHour"><value>°C/h</value></data>
+  <data name="UnitPerDegree"><value>per °C</value></data>
+
+
+  <data name="AddOn"><value>Add-on</value></data>
+  <data name="Integration"><value>Integration</value></data>
+  <data name="NotHeardFrom"><value>Not heard from</value></data>
+  <data name="VersionsHelp"><value>A setting that is missing is usually a feature one half does not have yet.</value></data>
+  <data name="SettingsUnreadable"><value>Settings file unreadable</value></data>
+  <data name="SettingsFile"><value>Settings file</value></data>
+  <data name="TheFileIs"><value>The file is</value></data>
+  <data name="FixOrStartFromScratch"><value>Fix it by hand, or press Start from scratch — the old file is kept as</value></data>
+  <data name="StartFromScratch"><value>Start from scratch</value></data>
+  <data name="UpdateOverwrites"><value>An update overwrites these edits</value></data>
+  <data name="NotRunning"><value>Adaptive Heating isn’t running</value></data>
+  <data name="NotRunningLabel"><value>Not running</value></data>
+  <data name="NotRunningHelp"><value>Edits here are saved either way, and take effect when it starts.</value></data>
+  <data name="WaitingForHomeAssistant"><value>Waiting for Home Assistant</value></data>
+  <data name="WaitingLabel"><value>Waiting</value></data>
+  <data name="WaitingHelp"><value>The pickers below have nothing to offer until it answers. Ids can still be typed by hand; they are not checked against Home Assistant if saved now.</value></data>
+  <data name="FixBeforeSaving"><value>Fix before saving</value></data>
+  <data name="SkippedRooms"><value>Skipped rooms</value></data>
+  <data name="SkippedRoomsHelp"><value>Everything else still works, and can still be saved.</value></data>
+  <data name="WorthKnowing"><value>Worth knowing</value></data>
+  <data name="WorthKnowingHelp"><value>None of these stops anything.</value></data>
+</root>

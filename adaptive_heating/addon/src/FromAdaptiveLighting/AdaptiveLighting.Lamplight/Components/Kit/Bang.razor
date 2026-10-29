@@ -1,0 +1,10 @@
+<span class="bang @Kind" title="@Title">!</span>
+
+@code {
+	/// <summary>"warn" or "bad" — a CSS class; the base "bang" rule already paints the warning colour.</summary>
+	[Parameter, EditorRequired]
+	public string Kind { get; set; } = "";
+
+	[Parameter, EditorRequired]
+	public string Title { get; set; } = "";
+}

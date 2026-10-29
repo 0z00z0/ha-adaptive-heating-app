@@ -1,0 +1,228 @@
+@namespace Adaptive.UI
+@inject HaCatalog Catalog
+
+@* A row's notes come from CommissioningVerdicts, read off the document and never re-derived here. *@
+
+<div class="comm-label">
+	<span class="lab">Rooms to switch on</span>
+
+	@* A label around the box, not a control inside one. *@
+	@if (AllKeys.Count > 0)
+	{
+		<label class="comm-all">
+			<input type="checkbox" @bind:get="IncludesEveryRoom" @bind:set="SetIncludeAll" />
+			Include all
+		</label>
+	}
+</div>
+
+@foreach (FloorGroup<CommissioningRow> group in Groups)
+{
+	<div class="comm-floor">
+		@if (AreaView.ShowsHeader(Groups.Count, group.Floor))
+		{
+			<div class="floor-row">
+				@AreaView.FloorTitle(group.Floor)
+				<button type="button" class="add" @onclick="() => ToggleFloor(group)">
+					@(AllPicked(group) ? "Switch off this floor" : "Switch on this floor")
+				</button>
+			</div>
+		}
+
+		<div class="comm-t">
+			@* Column heads once per floor. CSS hides them on the phone, where the row labels itself. *@
+			<div class="comm-cols" aria-hidden="true">
+				<span>On</span><span>Room</span>
+				<span class="c">Heaters</span><span class="c">Sensors</span><span class="c">Reading</span>
+				<span>Notes</span>
+			</div>
+
+			@foreach (CommissioningRow row in group.Items)
+			{
+				string key = row.Key;
+				bool open = _open.Contains(key);
+
+				@* A div and not a button: it contains a switch, and a control inside a control is invalid markup
+				   browsers resolve by dropping one. The aria-label is required because a role=button otherwise
+				   takes its accessible name from the entire row's content. *@
+				<div class="comm-row @(open ? "open" : null)"
+					 role="button"
+					 tabindex="0"
+					 aria-expanded="@(open ? "true" : "false")"
+					 aria-label="@($"Show what {row.Name} would do")"
+					 title="@($"Show what {row.Name} would do")"
+					 @key="key"
+					 @onclick="() => Unfold(key)"
+					 @onkeydown="args => OnRowKey(args, key)">
+					<span class="sw">
+						@* Lamplight's room switch, so the board and the room list draw one control. *@
+						<button type="button"
+								class="toggle @(Draft.IsPicked(key) ? "on" : null)"
+								role="switch"
+								aria-checked="@(Draft.IsPicked(key) ? "true" : "false")"
+								aria-label="@($"Switch on {row.Name}")"
+								@onclick="() => Toggle(key)"
+								@onclick:stopPropagation="true">
+							<span class="knob"></span>
+						</button>
+					</span>
+
+					<span class="rn">@row.Name<code>@(row.AreaId ?? "no area")</code></span>
+
+					<span class="c"><b>@row.HeaterCount</b></span>
+					<span class="c"><b>@row.SensorCount</b></span>
+					<span class="c lx">@Reading(row)</span>
+
+					<span class="notes meta">
+						@* The counts for the phone alone; CSS drops this span past 560px. *@
+						<span class="cnt">@Counts(row)</span>
+
+						@foreach (Verdict note in row.Notes)
+						{
+							<span class="note-chip @(note.Tone == VerdictTone.Warn ? "warn" : "info") info-line" @onclick:stopPropagation="true">
+								@note.Text
+								@if (note.Why is { Length: > 0 } why)
+								{
+									<InfoPopover Label="@note.Text" Severity="@(note.Tone == VerdictTone.Warn ? InfoSeverity.Warn : InfoSeverity.Neutral)">@why</InfoPopover>
+								}
+							</span>
+						}
+
+						@if (row.Notes.Count == 0)
+						{
+							<span class="note-ready">@CommissioningVerdicts.ReadyWord</span>
+						}
+					</span>
+				</div>
+
+				@if (open)
+				{
+					string unfoldKey = key + "-unfold";
+
+					<div class="comm-unfold" @key="unfoldKey">
+						@if (row.Resolved is { } resolved)
+						{
+							<div class="room-gear">
+								@foreach ((string Modifier, IReadOnlyList<string> Ids) kind in Gear(resolved))
+								{
+									@foreach (string entityId in kind.Ids)
+									{
+										<span class="gchip @kind.Modifier"><span class="chip-name">@Name(entityId)</span><code class="chip-id">@entityId</code></span>
+									}
+								}
+							</div>
+						}
+						else
+						{
+							<p class="hint">Nothing found to command.</p>
+						}
+					</div>
+				}
+			}
+		</div>
+	</div>
+}
+
+@if (NoSensor is { Length: > 0 } noSensor)
+{
+	<p class="comm-caveat info-host"><span class="info-line">@noSensor <InfoPopover Label="@noSensor" Severity="InfoSeverity.Warn">@CommissioningVerdicts.NoSensorWhy</InfoPopover></span></p>
+}
+
+<p class="comm-escape">Or <a href="settings?section=house">switch rooms on under House</a></p>
+
+@code {
+	/// <summary>The proposed rooms, already grouped by floor in display order.</summary>
+	[Parameter, EditorRequired]
+	public IReadOnlyList<FloorGroup<CommissioningRow>> Groups { get; set; } = [];
+
+	/// <summary>The draft the switches write into; nothing here reaches disk.</summary>
+	[Parameter, EditorRequired]
+	public CommissioningDraft Draft { get; set; } = default!;
+
+	/// <summary>The line about the rooms with no temperature sensor, or <c>null</c> when every room has one.</summary>
+	[Parameter]
+	public string? NoSensor { get; set; }
+
+	/// <summary>Raised whenever a switch moves, so the board can recount the commit button.</summary>
+	[Parameter]
+	public EventCallback Changed { get; set; }
+
+	/// <summary>Which rows are unfolded, by key; several at once, so two rooms can be compared.</summary>
+	private readonly HashSet<string> _open = new(StringComparer.Ordinal);
+
+	/// <inheritdoc/>
+	protected override void OnParametersSet() =>
+		_allKeys = [.. Groups.SelectMany(group => group.Items).Select(row => row.Key)];
+
+	private Task Toggle(string key)
+	{
+		Draft.ToggleRoom(key);
+
+		return Changed.InvokeAsync();
+	}
+
+	private Task ToggleFloor(FloorGroup<CommissioningRow> group)
+	{
+		IReadOnlyList<string> keys = [.. group.Items.Select(row => row.Key)];
+
+		if (AllPicked(group))
+			Draft.DropAll(keys);
+		else
+			Draft.PickAll(keys);
+
+		return Changed.InvokeAsync();
+	}
+
+	/// <summary>Whether every room on a floor is picked, which flips the bulk action's words.</summary>
+	private bool AllPicked(FloorGroup<CommissioningRow> group) => Draft.IncludesAll(group.Items.Select(row => row.Key));
+
+	// Settled per parameter set: the markup reads it twice a render, and it is a pure function of Groups.
+	private IReadOnlyList<string> AllKeys => _allKeys;
+
+	private IReadOnlyList<string> _allKeys = [];
+
+	private bool IncludesEveryRoom => Draft.IncludesAll(AllKeys);
+
+	private Task SetIncludeAll(bool include)
+	{
+		IReadOnlyList<string> keys = AllKeys;
+
+		if (include)
+			Draft.PickAll(keys);
+		else
+			Draft.DropAll(keys);
+
+		return Changed.InvokeAsync();
+	}
+
+	private void Unfold(string key)
+	{
+		if (!_open.Remove(key))
+			_open.Add(key);
+	}
+
+	/// <summary>The keyboard route into the unfold, which a div with a role has to provide for itself.</summary>
+	private void OnRowKey(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs args, string key)
+	{
+		if (args.Key is "Enter" or " ")
+			Unfold(key);
+	}
+
+	// Invariant digits: under nb-NO a double renders "20,4", which reads as two numbers.
+	private static string Reading(CommissioningRow row) =>
+		row.Reading is { } celsius
+			? string.Create(CultureInfo.InvariantCulture, $"{celsius:0.0} °C")
+			: "—";
+
+	private static string Counts(CommissioningRow row) =>
+		$"{row.HeaterCount} {(row.HeaterCount == 1 ? "heater" : "heaters")} · {row.SensorCount} {(row.SensorCount == 1 ? "sensor" : "sensors")}";
+
+	private string Name(string entityId) => Catalog.FriendlyNameOrId(entityId);
+
+	/// <summary>A room's discovered hardware, each kind with the chip modifier that colours it.</summary>
+	private static (string Modifier, IReadOnlyList<string> Ids)[] Gear(ResolvedRoom resolved) =>
+	[
+		("gchip-heater", resolved.Heaters),
+		("gchip-sensor", resolved.TemperatureSensors)
+	];
+}

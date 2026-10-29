@@ -1,0 +1,225 @@
+@using AdaptiveLighting.Lamplight.Components.Kit
+@using AdaptiveLighting.Web.Components
+@using Adaptive.Engine
+
+@* Heaters and sensors: what discovery found, the way back from each ×, and the pickers for when it is wrong. *@
+
+<Fold Id="sensors"
+	  Title="Heaters and sensors"
+	  Summary="@Summary"
+	  BangKind="@(MustPickAPowerSensor ? "warn" : null)"
+	  BangTitle="Pick a power sensor"
+	  Open="@Open"
+	  OpenChanged="@OpenChanged">
+	@if (Model.Resolved is { } resolved)
+	{
+		<ul class="gear">
+			@foreach (string heater in resolved.Heaters)
+			{
+				string entityId = heater;
+				<li>
+					@Model.NameOf(entityId)
+					<button type="button" class="x" title="@($"Leave {Model.NameOf(entityId)} out of this room")" aria-label="@($"Leave {Model.NameOf(entityId)} out of this room")" @onclick="() => Model.Exclude(entityId)">&times;</button>
+				</li>
+			}
+			@foreach (string sensor in resolved.TemperatureSensors)
+			{
+				string entityId = sensor;
+				<li>
+					@Model.NameOf(entityId)
+					<button type="button" class="x" title="@($"Leave {Model.NameOf(entityId)} out of this room")" aria-label="@($"Leave {Model.NameOf(entityId)} out of this room")" @onclick="() => Model.Exclude(entityId)">&times;</button>
+				</li>
+			}
+			@if (resolved.PowerSensor is { Length: > 0 } meter)
+			{
+				string entityId = meter;
+				<li>
+					@Model.NameOf(entityId)
+					@* A picked sensor is cleared in the picker below; leaving it out would not drop it. *@
+					@if (resolved.PowerSensorFoundBy is not PowerSensorSource.Chosen)
+					{
+						<button type="button" class="x" title="@($"Leave {Model.NameOf(entityId)} out of this room")" aria-label="@($"Leave {Model.NameOf(entityId)} out of this room")" @onclick="() => Model.Exclude(entityId)">&times;</button>
+					}
+				</li>
+			}
+		</ul>
+
+		@if (resolved.TemperatureSensors.Count == 0)
+		{
+			<p class="lede info-line">
+				@(Model.NeighbourName is { Length: > 0 } lender ? $"No sensor here — heats on {lender}'s reading" : "No sensor here — switched by the mode")
+				<Info Label="No sensor">
+					With no reading of its own the room borrows a neighbour's, named below, or is switched on and off
+					by each mode. A neighbour with no reading lends nothing, and the room then stops.
+				</Info>
+			</p>
+		}
+		else if (resolved.TemperatureSensors.Count > 1)
+		{
+			<p class="lede info-line">
+				@resolved.TemperatureSensors.Count sensors here
+				<Info Label="Sensors">The room reads the middle of those still reporting.</Info>
+			</p>
+		}
+
+		@if (resolved.PowerSensorFoundBy is PowerSensorSource.MoreThanOne)
+		{
+			<p class="lede info-line">
+				@resolved.PowerSensorCandidates.Count power sensors here — pick one
+				<Info Label="Power sensors" Severity="InfoSeverity.Warn">
+					Each could be this room's: @string.Join(", ", resolved.PowerSensorCandidates.Select(Model.NameOf)).
+					None is used until one is picked below.
+				</Info>
+			</p>
+		}
+		else
+		{
+			<p class="lede info-line">
+				@PowerLine(resolved.PowerSensorFoundBy)
+				<Info Label="Power sensor">
+					A power sensor on a heater's own device comes first, then one in this room carrying the House tab's
+					label. One picked below replaces both.
+				</Info>
+			</p>
+		}
+	}
+	else
+	{
+		<div class="notice bad">@Model.PreviewError</div>
+	}
+
+	@if (Model.Excluded is { Count: > 0 } excluded)
+	{
+		<div class="sub-h">Left out by hand</div>
+		<ul class="gear">
+			@foreach (string entity in excluded)
+			{
+				string entityId = entity;
+				<li>
+					@Model.NameOf(entityId)
+					<button type="button" class="x" title="@($"Let discovery find {Model.NameOf(entityId)} again")" aria-label="@($"Let discovery find {Model.NameOf(entityId)} again")" @onclick="() => Model.Include(entityId)">&times;</button>
+				</li>
+			}
+		</ul>
+	}
+
+	<div class="sub-h">Pick by hand</div>
+	<p class="lede info-line">
+		Each list replaces the automatic choice
+		<Info Label="Pick by hand">
+			Each list filled in here <strong>replaces</strong> the automatic choice for that list only. A group of
+			heaters found in the room is opened into its own heaters. Fixing the room in Home Assistant is usually
+			better.
+		</Info>
+	</p>
+
+	<div class="rows">
+		<Row Label="Heaters" Value="@HeatersValue" IsWide="true">
+			<Help>Empty means every heater found in this room. Name any here and only those are driven.</Help>
+			<ChildContent>
+				<EntityListPicker Value="@Model.Heaters"
+								  ValueChanged="@Model.SetHeaters"
+								  Options="@Model.HeaterChoices"
+								  Others="@Model.HeaterOthers"
+								  OthersLabel="@RoomPageModel.OthersLabel"
+								  Lookup="@Model.Lookup"
+								  EmptyLabel="Found in this room."
+								  AddLabel="Add a heater…"
+								  EmptyNote="@Model.EmptyNote("heaters")"
+								  Placeholder="switch.example" />
+			</ChildContent>
+		</Row>
+
+		<Row Label="Temperature sensors" Value="@SensorsValue" IsWide="true">
+			<Help>Empty means every temperature sensor found in this room. Only temperature sensors are offered.</Help>
+			<ChildContent>
+				<EntityListPicker Value="@Model.TemperatureSensors"
+								  ValueChanged="@Model.SetTemperatureSensors"
+								  Options="@Model.SensorChoices"
+								  Others="@Model.SensorOthers"
+								  OthersLabel="@RoomPageModel.OthersLabel"
+								  Lookup="@Model.Lookup"
+								  EmptyLabel="Found in this room."
+								  AddLabel="Add a sensor…"
+								  EmptyNote="@Model.EmptyNote("temperature sensors")"
+								  Placeholder="sensor.example_temperature" />
+			</ChildContent>
+		</Row>
+
+		<Row Label="Borrow the reading of" Value="@(Model.NeighbourName ?? "None")" IsWide="true">
+			<Help>A room with no sensor of its own heats on this room's reading. Never on a reading the neighbour does not have.</Help>
+			<ChildContent>
+				<select class="cell" aria-label="Borrow the reading of" @bind:get="Model.Neighbour ?? string.Empty" @bind:set="SetNeighbour">
+					<option value="">None</option>
+					@foreach ((string areaId, string name) in Model.NeighbourChoices)
+					{
+						<option value="@areaId">@name</option>
+					}
+				</select>
+			</ChildContent>
+		</Row>
+
+		<Row Label="Window sensor" Value="@(Model.WindowSensor is { Length: > 0 } window ? Model.NameOf(window) : "None")" IsWide="true">
+			<Help>While it reads open, the room stops heating.</Help>
+			<ChildContent>
+				<EntityPicker Value="@Model.WindowSensor"
+							  ValueChanged="@Model.SetWindowSensor"
+							  Options="@Model.WindowChoices"
+							  Lookup="@Model.Lookup"
+							  NoneLabel="(none)"
+							  EmptyNote="@Model.EmptyNote("window sensors")"
+							  Placeholder="binary_sensor.example_window" />
+			</ChildContent>
+		</Row>
+
+		<Row Label="Power sensor" Value="@(Model.PowerSensor is { Length: > 0 } power ? Model.NameOf(power) : "Found in this room")" IsWide="true">
+			<Help>Empty means the one found for this room. What the heater draws tells a heater that does nothing from a relay that is stuck.</Help>
+			<ChildContent>
+				<EntityPicker Value="@Model.PowerSensor"
+							  ValueChanged="@Model.SetPowerSensor"
+							  Options="@Model.PowerChoices"
+							  Lookup="@Model.Lookup"
+							  NoneLabel="Found in this room."
+							  EmptyNote="@Model.EmptyNote("power sensors")"
+							  Placeholder="sensor.example_power" />
+			</ChildContent>
+		</Row>
+	</div>
+
+	<p class="lede info-line">
+		@Model.ScopeNote
+		<Info Label="Offered">Anything already picked stays listed even if it is elsewhere.</Info>
+	</p>
+</Fold>
+
+@code {
+	[Parameter, EditorRequired]
+	public RoomPageModel Model { get; set; } = default!;
+
+	[Parameter]
+	public bool Open { get; set; }
+
+	[Parameter]
+	public EventCallback<bool> OpenChanged { get; set; }
+
+	// A plain count of what discovery found, read off the same list the chips above are drawn from.
+	private string? Summary => Model.Resolved is { } resolved
+		? $"{resolved.Heaters.Count} heaters · {resolved.TemperatureSensors.Count} sensors"
+		: null;
+
+	private string HeatersValue => Model.Heaters.Count > 0 ? $"{Model.Heaters.Count} named" : "Found in this room";
+
+	private string SensorsValue => Model.TemperatureSensors.Count > 0 ? $"{Model.TemperatureSensors.Count} named" : "Found in this room";
+
+	private Task SetNeighbour(string? value) => Model.SetNeighbour(value);
+
+	private static string PowerLine(PowerSensorSource source) => source switch
+	{
+		PowerSensorSource.SameDevice => "Power sensor on the heater's device",
+		PowerSensorSource.Label => "Power sensor found by its label",
+		PowerSensorSource.Chosen => "Power sensor picked by hand",
+		_ => "No power sensor here"
+	};
+
+	private bool MustPickAPowerSensor => Model.Resolved?.PowerSensorFoundBy is PowerSensorSource.MoreThanOne;
+}

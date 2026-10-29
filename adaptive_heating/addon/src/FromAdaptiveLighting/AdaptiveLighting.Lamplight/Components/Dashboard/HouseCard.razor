@@ -1,0 +1,61 @@
+@namespace Adaptive.UI
+@using AdaptiveLighting.Lamplight.Components.Kit
+
+<section class="glass d2-house" aria-label="The house">
+	@if (Model.HouseMode is { } mode)
+	{
+		<div class="d2-cell">
+			<Pair Name="House mode"
+				  Word="@(mode.CurrentValue ?? "unknown")"
+				  WordKind="plain"
+				  Options="@ModeOptions(mode)"
+				  Current="@CurrentMode(mode)"
+				  OnSelect="index => Model.SelectMode(mode.Options[index].Value)" />
+			@if (Model.ModeConfirmation.TextAt(Model.Now) is { Length: > 0 } confirmation)
+			{
+				<p class="d2-note ok">@confirmation</p>
+			}
+			@if (Model.ModeMessage is { Length: > 0 } message)
+			{
+				<p class="d2-note bad">@message</p>
+			}
+		</div>
+	}
+	else
+	{
+		<p class="d2-note">No house mode &mdash; <a href="settings?section=housemodes">set one up</a></p>
+	}
+
+	@* The master switch itself lives under Settings → House, not here — see the "Master switch" fold. *@
+
+	@if (Model.People.Count > 0)
+	{
+		<ul class="people" aria-label="Who is home">
+			@foreach (PersonView person in Model.People)
+			{
+				<li class="@PersonClass(person)">@person.Name</li>
+			}
+		</ul>
+	}
+</section>
+
+@code {
+	[Parameter, EditorRequired]
+	public DashboardPageModel Model { get; set; } = default!;
+
+	private static IReadOnlyList<string> ModeOptions(HouseModeView mode) => [.. mode.Options.Select(option => option.Value)];
+
+	private static int CurrentMode(HouseModeView mode)
+	{
+		for (int index = 0; index < mode.Options.Count; index++)
+		{
+			if (mode.Options[index].IsCurrent)
+				return index;
+		}
+
+		return -1;
+	}
+
+	private static string? PersonClass(PersonView person) =>
+		!person.IsAvailable ? "unknown" : person.IsHome ? null : "away";
+}

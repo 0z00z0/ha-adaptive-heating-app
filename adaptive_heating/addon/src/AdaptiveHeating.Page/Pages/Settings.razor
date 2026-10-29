@@ -1,0 +1,298 @@
+@page "/settings"
+@implements IDisposable
+@using AdaptiveHeating.Page.Components.Kit
+@using AdaptiveHeating.Page.Components.Settings
+@inject ISettingsStore Store
+@inject HeatingDocumentHost Document
+@inject HaCatalog Catalog
+@inject ModeService Modes
+@inject ILogger<HousePageModel> HouseModesLogger
+@inject IStringLocalizer<AdaptiveHeating.Page.Resources.PageStrings> Words
+@inject IJSRuntime Js
+@inject IServiceProvider Services
+
+<PageTitle>@Words["PageTitle"]</PageTitle>
+
+<NavigationLock OnBeforeInternalNavigation="ConfirmLeave" ConfirmExternalNavigation="@HasUnsavedEdits" />
+
+<h1 class="sr-only">@Words["PageTitle"]</h1>
+
+@* Lighting's notices over the settings, on every tab that reads the document. *@
+@if (ReadsTheDocument && HouseModes.LoadError is { Length: > 0 } loadError)
+{
+	<div class="notice bad">
+		<span class="info-line">
+			<strong>@Words["SettingsUnreadable"]</strong>
+			<Info Label="@SettingsFileLabel" Severity="InfoSeverity.Bad">
+				<span class="info-para">@loadError</span>
+				<span class="info-para">
+					@Words["TheFileIs"] <code>@HouseModes.ConfigFilePath</code>. @Words["FixOrStartFromScratch"]
+					<code>@HouseModes.BackupPath</code>.
+				</span>
+			</Info>
+		</span>
+		<button type="button" @onclick="HouseModes.StartFromScratch">@Words["StartFromScratch"]</button>
+	</div>
+}
+else if (ReadsTheDocument)
+{
+	@if (HouseModes.LocationWarning is { Length: > 0 } locationWarning)
+	{
+		<div class="notice warn">
+			<span class="info-line">
+				<strong>@Words["UpdateOverwrites"]</strong>
+				<Info Label="@SettingsFileLabel" Severity="InfoSeverity.Warn">@locationWarning</Info>
+			</span>
+		</div>
+	}
+
+	@if (!HouseModes.EngineIsRunning || !HouseModes.HomeAssistantIsAnswering)
+	{
+		<div class="notice warn">
+			@if (!HouseModes.EngineIsRunning)
+			{
+				<span class="info-line">
+					<strong>@Words["NotRunning"]</strong>
+					<Info Label="@NotRunningLabel" Severity="InfoSeverity.Bad">
+						@HouseModes.EngineFault @Words["NotRunningHelp"]
+					</Info>
+				</span>
+			}
+			@if (!HouseModes.HomeAssistantIsAnswering)
+			{
+				<span class="info-line">
+					<strong>@Words["WaitingForHomeAssistant"]</strong>
+					<Info Label="@WaitingLabel" Severity="InfoSeverity.Bad">@Words["WaitingHelp"]</Info>
+				</span>
+			}
+		</div>
+	}
+
+	@if (HouseModes.HasValidationNotice && HouseModes.Validation is { } validation)
+	{
+		<div class="notice @(validation.IsValid ? "warn" : "bad")">
+			@if (validation.Errors.Count > 0)
+			{
+				<span class="info-line">
+					<strong>@ValidationHeadline.Errors(validation.Errors.Count)</strong>
+					<Info Label="@FixLabel" Severity="InfoSeverity.Bad">
+						@foreach (string error in validation.Errors)
+						{
+							<span class="info-para">@ValidationWording.Plain(error)</span>
+						}
+					</Info>
+				</span>
+			}
+			@if (validation.AreaErrors.Count > 0)
+			{
+				<span class="info-line">
+					<strong>@ValidationHeadline.SkippedRooms(validation.AreaErrors.Count)</strong>
+					<Info Label="@SkippedLabel" Severity="InfoSeverity.Warn">
+						<span class="info-para">@Words["SkippedRoomsHelp"]</span>
+						@foreach (AreaError areaError in validation.AreaErrors)
+						{
+							<span class="info-para"><strong>@areaError.AreaName</strong>: @ValidationWording.Plain(areaError.Message)</span>
+						}
+					</Info>
+				</span>
+			}
+			@if (validation.Warnings.Count > 0)
+			{
+				<span class="info-line">
+					<strong>@ValidationHeadline.Warnings(validation.Warnings.Count)</strong>
+					<Info Label="@WorthKnowingLabel" Severity="InfoSeverity.Warn">
+						<span class="info-para">@Words["WorthKnowingHelp"]</span>
+						@foreach (string warning in validation.Warnings)
+						{
+							<span class="info-para">@ValidationWording.Plain(warning)</span>
+						}
+					</Info>
+				</span>
+			}
+		</div>
+	}
+}
+
+@if (Model.Document.SetByHand.Count > 0)
+{
+	<p class="notice warn">
+		@Words["StandingOffThePlan"]
+		<Info Label="@HandLabel" Severity="InfoSeverity.Warn">@HandRooms</Info>
+	</p>
+}
+
+<nav class="subnav" aria-label="@NavLabel">
+	<a href="settings?section=house" class="@Cur(SettingsSection.House)"
+	   @onclick="() => Model.Show(SettingsSection.House)" @onclick:preventDefault="true">@Words["HouseTitle"]</a>
+	<a href="settings?section=schedule" class="@Cur(SettingsSection.Schedule)"
+	   @onclick="() => Model.Show(SettingsSection.Schedule)" @onclick:preventDefault="true">@Words["ScheduleTitle"]</a>
+	<a href="settings?section=calendars" class="@Cur(SettingsSection.Calendars)"
+	   @onclick="() => Model.Show(SettingsSection.Calendars)" @onclick:preventDefault="true">@Words["CalendarsTitle"]</a>
+	<a href="settings?section=housemodes" class="@Cur(SettingsSection.HouseModes)"
+	   @onclick="() => Model.Show(SettingsSection.HouseModes)" @onclick:preventDefault="true">@Words["HouseModesTitle"]</a>
+</nav>
+
+@if (Model.IsActive(SettingsSection.Calendars))
+{
+	<CalendarsTab Model="@Model" />
+}
+else
+{
+	@* Lighting's tab over lighting's page model, which writes the document through its host. The save bar is
+	   lighting's settings page's, since that page and not the tab carries it. *@
+	@if (Model.IsActive(SettingsSection.House))
+	{
+		<Adaptive.UI.HouseOverview Model="@HouseModes" />
+	}
+	else if (Model.IsActive(SettingsSection.Schedule))
+	{
+		<Adaptive.UI.ScheduleTab Model="@HouseModes" />
+	}
+	else
+	{
+		<Adaptive.UI.ModesTab Model="@HouseModes" />
+	}
+
+	@if (HouseModes.ShowSaveBar)
+	{
+		<div class="savebar-fixed">
+			<button type="button" class="primary" @onclick="HouseModes.Save" disabled="@HouseModes.IsBusy">Save and apply</button>
+			<button type="button" @onclick="HouseModes.Reload" disabled="@HouseModes.IsBusy">Discard changes</button>
+
+			@if (HouseModes.SaveBarProblems is { Length: > 0 } problems)
+			{
+				<span class="savebar-note bad">@problems</span>
+			}
+			else if (HouseModes.Result is { Written: false } result)
+			{
+				<span class="savebar-note bad">@result.Message</span>
+			}
+
+			@if (HouseModes.SaveConfirmation.TextAt(HouseModes.Now) is { Length: > 0 } confirmation)
+			{
+				<span class="savebar-note ok savebar-toast" role="status">@confirmation</span>
+			}
+		</div>
+	}
+}
+
+@* Beneath the tab host, so every tab shows a refusal and shows it once. *@
+@if (Model.LastSaveWasRefused)
+{
+	<p class="notice bad">
+		@Words["SaveRefused"]
+		<Info Label="@RefusedLabel" Severity="InfoSeverity.Bad">@Model.LastOutcome.Message</Info>
+	</p>
+}
+
+<footer class="foot">
+	<span class="foot-cell">
+		@Words["AddOn"]
+		<b>@Model.Document.Versions.AddOn</b>
+	</span>
+	<span class="foot-cell">
+		@Words["Integration"]
+		<b>@IntegrationVersion</b>
+		<Info Label="@IntegrationLabel" Severity="@IntegrationSeverity">@Words["VersionsHelp"]</Info>
+	</span>
+</footer>
+
+@code {
+	private SettingsPageModel? _model;
+
+	/// <summary>Which section to open on load; read once, after which the sub-navigation owns the choice.</summary>
+	[Parameter]
+	[SupplyParameterFromQuery(Name = "section")]
+	public string? SectionQuery { get; set; }
+
+	private SettingsPageModel Model => _model!;
+
+	private HousePageModel? _houseModes;
+
+	// Read from the document only once a tab drawing it is opened, so the Calendars tab never touches the file.
+	private HousePageModel HouseModes
+	{
+		get
+		{
+			if (_houseModes is null)
+			{
+				_houseModes = new HousePageModel(Document, Catalog, Modes, HouseModesLogger, Store, Services.GetService(typeof(ConfigLocation)) as ConfigLocation);
+				_houseModes.Changed += Redraw;
+				_houseModes.Start();
+			}
+
+			return _houseModes;
+		}
+	}
+
+	// The Calendars tab never reads the document, so it draws none of the document's notices.
+	private bool ReadsTheDocument => !Model.IsActive(SettingsSection.Calendars);
+
+	private bool HasUnsavedEdits => _houseModes?.HasUnsavedEdits ?? false;
+
+	private string SettingsFileLabel => Words["SettingsFile"];
+
+	private string NotRunningLabel => Words["NotRunningLabel"];
+
+	private string WaitingLabel => Words["WaitingLabel"];
+
+	private string FixLabel => Words["FixBeforeSaving"];
+
+	private string SkippedLabel => Words["SkippedRooms"];
+
+	private string WorthKnowingLabel => Words["WorthKnowing"];
+
+	private string NavLabel => Words["PageTitle"];
+
+	private string HandLabel => Words["StandingOffThePlan"];
+
+	private string RefusedLabel => Words["SaveRefused"];
+
+	private string IntegrationLabel => Words["Integration"];
+
+	// The integration's version explains a setting somebody cannot find, so its absence is worth knowing
+	// rather than silent.
+	private string IntegrationVersion => Model.Document.Versions.Integration ?? Words["NotHeardFrom"];
+
+	private InfoSeverity IntegrationSeverity =>
+		Model.Document.Versions.Integration is null ? InfoSeverity.Warn : InfoSeverity.Neutral;
+
+	private string HandRooms => string.Join(", ", Model.Document.SetByHand.Select(room => room.Name));
+
+	private string? Cur(SettingsSection section) => Model.IsActive(section) ? "cur" : null;
+
+	/// <inheritdoc/>
+	protected override void OnInitialized()
+	{
+		_model = new SettingsPageModel(Store);
+		_model.Changed += Redraw;
+		_model.Start(SectionQuery);
+	}
+
+	private async Task ConfirmLeave(LocationChangingContext context)
+	{
+		if (!HasUnsavedEdits)
+			return;
+
+		if (!await Js.InvokeAsync<bool>("confirm", HousePageModel.LeaveQuestion))
+			context.PreventNavigation();
+	}
+
+	private void Redraw() => _ = InvokeAsync(StateHasChanged);
+
+	/// <inheritdoc/>
+	public void Dispose()
+	{
+		if (_houseModes is not null)
+		{
+			_houseModes.Changed -= Redraw;
+			_houseModes.Dispose();
+		}
+
+		if (_model is null)
+			return;
+
+		_model.Changed -= Redraw;
+		_model.Dispose();
+	}
+}

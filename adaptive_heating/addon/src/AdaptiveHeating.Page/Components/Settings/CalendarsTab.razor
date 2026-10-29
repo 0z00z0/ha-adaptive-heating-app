@@ -1,0 +1,155 @@
+@using Adaptive.UI
+@using AdaptiveHeating.Page.Components.Kit
+@inject IStringLocalizer<AdaptiveHeating.Page.Resources.PageStrings> Words
+
+@* Two settings on one screen behind one save: the calendar the arrivals are read from, and the local one each
+	finished warm-up is written into. Both are chosen by entity id, so a rename in Home Assistant moves neither. *@
+
+<div class="glass">
+	<div class="sec-h">
+		@Words["CalendarsTitle"]
+		<Info Label="@Title" Severity="InfoSeverity.Neutral">@Words["CalendarsHelp"]</Info>
+	</div>
+
+	@if (Model.Document.CalendarsOffered.Count == 0)
+	{
+		<p class="empty">
+			@Words["NoCalendars"]
+			<Info Label="@NoneLabel" Severity="InfoSeverity.Warn">@Words["NoCalendarsHelp"]</Info>
+		</p>
+	}
+	else
+	{
+		<div class="rows">
+			<Row Label="@ArrivalLabel" Value="@NameOf(Arrivals)" IsWide="true">
+				<Help>@Words["ArrivalCalendarHelp"]</Help>
+				<ChildContent>
+					@* Lighting's picker. What was picked lives in the edit table until a save, so the field draws the
+						choice and not what is stored. A calendar gone from the house is said once, by the chip below. *@
+					<EntityPicker Value="@Arrivals" ValueChanged="@PickArrivals" Options="@Offered(Model.Document.CalendarsOffered)"
+								  NoneLabel="@NoneChosen" Placeholder="calendar.arrivals" Lookup="@EntityLookup.Ids" />
+
+					@if (IsGone(Arrivals))
+					{
+						<span class="chip st-hand">@Words["CalendarNotThere"]</span>
+						<Info Label="@GoneLabel" Severity="InfoSeverity.Bad">@Words["CalendarNotThereHelp"]</Info>
+					}
+				</ChildContent>
+			</Row>
+
+			<Row Label="@RecordLabel" Value="@NameOf(Record)" IsWide="true">
+				<Help>@Words["RecordCalendarHelp"]</Help>
+				<ChildContent>
+					@if (Local.Count == 0)
+					{
+						<span class="chip st-hand">@Words["NoLocalCalendars"]</span>
+						<Info Label="@NoLocalLabel" Severity="InfoSeverity.Warn">@Words["NoLocalCalendarsHelp"]</Info>
+					}
+					else
+					{
+						<EntityPicker Value="@Record" ValueChanged="@PickRecord" Options="@Offered(Local)"
+									  NoneLabel="@NoneChosen" Placeholder="calendar.heating_record" Lookup="@EntityLookup.Ids" />
+					}
+
+					@if (IsGone(Record))
+					{
+						<span class="chip st-hand">@Words["CalendarNotThere"]</span>
+						<Info Label="@GoneLabel" Severity="InfoSeverity.Bad">@Words["CalendarNotThereHelp"]</Info>
+					}
+				</ChildContent>
+			</Row>
+		</div>
+
+		<div class="btnrow">
+			<button type="button" class="btn primary" disabled="@(!HasEdits)" @onclick="Save">@Words["Save"]</button>
+		</div>
+
+	}
+</div>
+
+@code {
+	/// <summary>The entry standing for no calendar. No entity id is empty, so a comparison tells the two apart.</summary>
+	private const string Nothing = "";
+
+	[Parameter, EditorRequired]
+	public SettingsPageModel Model { get; set; } = default!;
+
+	private string? _arrivals;
+	private string? _record;
+	private bool _edited;
+
+	private string Title => Words["CalendarsTitle"];
+
+	private string ArrivalLabel => Words["ArrivalCalendar"];
+
+	private string RecordLabel => Words["RecordCalendar"];
+
+	private string NoneLabel => Words["NoCalendars"];
+
+	private string NoLocalLabel => Words["NoLocalCalendars"];
+
+	private string GoneLabel => Words["CalendarNotThere"];
+
+	private string NoneChosen => Words["NoCalendarChosen"];
+
+	private string Arrivals => _edited ? _arrivals ?? Nothing : Model.Document.ArrivalCalendar ?? Nothing;
+
+	private string Record => _edited ? _record ?? Nothing : Model.Document.RecordCalendar ?? Nothing;
+
+	private bool HasEdits => _edited;
+
+	private IReadOnlyList<CalendarOnOffer> Local =>
+		[.. Model.Document.CalendarsOffered.Where(calendar => calendar.Local)];
+
+	/// <summary>What a person reads beside the choice, or the entity id where the calendar is no longer reported.</summary>
+	private string NameOf(string entityId)
+	{
+		if (entityId.Length == 0)
+			return Words["NoCalendarChosen"];
+
+		return Model.Document.CalendarsOffered
+			.FirstOrDefault(calendar => string.Equals(calendar.EntityId, entityId, StringComparison.Ordinal))?.Name
+			?? entityId;
+	}
+
+	// The picker keeps a chosen calendar nobody reports as an option of its own, so it is never dropped.
+	private static IReadOnlyList<EntityOption> Offered(IReadOnlyList<CalendarOnOffer> offered) =>
+		[.. offered.Select(calendar => new EntityOption(calendar.EntityId, calendar.Name, null))];
+
+	/// <summary>A calendar that is chosen and no longer reported, which is what a rename in Home Assistant leaves.</summary>
+	private bool IsGone(string entityId) =>
+		entityId.Length > 0
+		&& !Model.Document.CalendarsOffered.Any(calendar => string.Equals(calendar.EntityId, entityId, StringComparison.Ordinal));
+
+	private void PickArrivals(string? entityId)
+	{
+		Start();
+		_arrivals = entityId ?? Nothing;
+	}
+
+	private void PickRecord(string? entityId)
+	{
+		Start();
+		_record = entityId ?? Nothing;
+	}
+
+	// Both fields move into the edit table together, so saving one never writes the stored value of the other
+	// back over a change made to it on the same screen.
+	private void Start()
+	{
+		if (_edited)
+			return;
+
+		_arrivals = Model.Document.ArrivalCalendar ?? Nothing;
+		_record = Model.Document.RecordCalendar ?? Nothing;
+		_edited = true;
+	}
+
+	private void Save()
+	{
+		Model.SaveCalendars(_arrivals, _record);
+
+		if (!Model.LastSaveWasRefused)
+			_edited = false;
+	}
+}

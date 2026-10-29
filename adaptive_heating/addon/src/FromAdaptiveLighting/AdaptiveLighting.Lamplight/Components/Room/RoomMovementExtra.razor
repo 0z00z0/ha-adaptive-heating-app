@@ -1,0 +1,68 @@
+@using AdaptiveLighting.Lamplight.Components.Kit
+@using AdaptiveLighting.Web.Components
+
+@* The rules that have no twin in the house defaults: the two gates, and whether another automation counts as a
+   hand. Row takes both Help and ChildContent as named fragments: once one is written explicitly, the other must
+   be too, or the control markup has nowhere recognised to land. *@
+
+<div class="rows">
+	<Row Label="Pause while" Value="@(Model.PauseWhenOn.Count > 0 ? $"{Model.PauseWhenOn.Count} named" : "Nothing")" IsWide="true">
+		<Help>While any of these is on, the room is heated as in away: a lit fireplace, say. Tick the box for the opposite.</Help>
+		<ChildContent>
+			<EntityListPicker Value="@Model.PauseWhenOn"
+							  ValueChanged="@Model.SetPauseWhenOn"
+							  Options="@Model.BlockerOptions"
+							  Lookup="@Model.Lookup"
+							  EmptyLabel="Nothing pauses this room."
+							  AddLabel="Add one…"
+							  Placeholder="input_boolean.fireplace" />
+			@if (Model.PauseWhenOn is { Count: > 0 })
+			{
+				<label class="checks">
+					<input type="checkbox" checked="@Model.PauseWhenOnInverted" @onchange="@(args => Model.SetPauseWhenOnInverted(args.Value is true))" />
+					while these are off instead
+				</label>
+			}
+		</ChildContent>
+	</Row>
+
+	<Row Label="Hold while" Value="@(Model.HoldWhenOn.Count > 0 ? $"{Model.HoldWhenOn.Count} named" : "Nothing")" IsWide="true">
+		<Help>While any of these is on, the room keeps its temperature and a new mode or period waits. A change at the thermostat still works.</Help>
+		<ChildContent>
+			<EntityListPicker Value="@Model.HoldWhenOn"
+							  ValueChanged="@Model.SetHoldWhenOn"
+							  Options="@Model.BlockerOptions"
+							  Lookup="@Model.Lookup"
+							  EmptyLabel="None"
+							  AddLabel="Add one…"
+							  Placeholder="input_boolean.sauna" />
+			@if (Model.HoldWhenOn is { Count: > 0 })
+			{
+				<label class="checks">
+					<input type="checkbox" checked="@Model.HoldWhenOnInverted" @onchange="@(args => Model.SetHoldWhenOnInverted(args.Value is true))" />
+					while these are off instead
+				</label>
+			}
+		</ChildContent>
+	</Row>
+
+	<Row Label="Other automations count as manual changes"
+		 Value="@(Model.AutomationsCountAsManual ? "Yes" : "No")"
+		 IsOwn="@Model.AutomationsAreOwn"
+		 HouseText="@Model.AutomationsHouseText"
+		 OnRevert="@(() => Model.SetAutomationsAsManual(null))"
+		 IsWide="true">
+		<Help>Yes: a temperature set by another Home Assistant automation is treated like somebody at the thermostat.</Help>
+		<ChildContent>
+			<div class="seg" role="group" aria-label="Other automations count as manual changes">
+				<button type="button" aria-pressed="@(Model.AutomationsCountAsManual ? "true" : "false")" @onclick="@(() => Model.SetAutomationsAsManual(true))">Yes</button>
+				<button type="button" aria-pressed="@(Model.AutomationsCountAsManual ? "false" : "true")" @onclick="@(() => Model.SetAutomationsAsManual(false))">No</button>
+			</div>
+		</ChildContent>
+	</Row>
+</div>
+
+@code {
+	[Parameter, EditorRequired]
+	public RoomPageModel Model { get; set; } = default!;
+}

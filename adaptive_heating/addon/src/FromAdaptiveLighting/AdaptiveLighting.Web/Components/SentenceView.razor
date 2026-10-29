@@ -1,0 +1,72 @@
+@* Sentences are built elsewhere (AreaSentences, SentenceBuilder) and nothing is saved here: every edit
+   leaves through a callback. *@
+
+<div class="sentences">
+	@foreach (Sentence sentence in Sentences)
+	{
+		<p class="sentence">
+			@foreach (SentencePart part in sentence.Parts)
+			{
+				@switch (part)
+				{
+					case SentenceText text:
+						@text.Text
+						break;
+
+					case SentenceToken token:
+						<SentenceTokenView Token="@token"
+										   Editable="@Editable"
+										   Note="@Note"
+										   Edited="@Edited"
+										   Reverted="@Reverted" />
+						break;
+
+					case SentenceFigure figure:
+						<span class="sentence-figure" role="img" aria-label="@figure.AltText">@figure.Content</span>
+						break;
+				}
+			}
+		</p>
+	}
+</div>
+
+@if (ShowLegend && Editable && HasOwnValues)
+{
+	<p class="sentence-legend">
+		<span class="tok-own-dot" aria-hidden="true"></span>
+		<span>@LegendText</span>
+	</p>
+}
+
+@code {
+	/// <summary>The sentences to draw, in reading order.</summary>
+	[Parameter, EditorRequired]
+	public IReadOnlyList<Sentence> Sentences { get; set; } = [];
+
+	/// <summary>Whether the values are controls or just words.</summary>
+	[Parameter]
+	public bool Editable { get; set; } = true;
+
+	/// <summary>Raised when a value is picked; the key is the setting's property name, so a handler can match
+	/// on <c>nameof</c> and cannot drift from the schema silently.</summary>
+	[Parameter]
+	public EventCallback<SentenceEdit> Edited { get; set; }
+
+	// The handler must clear the room's property, not copy the house's current number in, so the room keeps
+	// following the house when the house changes.
+	[Parameter]
+	public EventCallback<string> Reverted { get; set; }
+
+	/// <summary>One line in each popover about when a pick takes effect, worded by the page.</summary>
+	[Parameter]
+	public string? Note { get; set; }
+
+	/// <summary>Whether to explain the amber dot underneath, shown only when a dot exists.</summary>
+	[Parameter]
+	public bool ShowLegend { get; set; } = true;
+
+	[Parameter]
+	public string LegendText { get; set; } = "= this room's own";
+
+	private bool HasOwnValues => Sentences.Sum(sentence => sentence.OwnValueCount) > 0;
+}

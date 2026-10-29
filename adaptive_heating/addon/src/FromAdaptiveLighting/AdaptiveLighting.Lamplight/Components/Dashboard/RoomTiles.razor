@@ -1,0 +1,50 @@
+@using AdaptiveLighting.Lamplight.Components.Kit
+
+<section aria-label="Rooms">
+	<h2 class="sec-h">Rooms</h2>
+
+	<div class="tiles">
+		@foreach (RoomTile room in Rooms)
+		{
+			@if (room.Target is { } target)
+			{
+				<a class="tile lit lamp-glow" href="@HouseView.RoomHref(room.AreaId)" style="@Paint(target)" @key="@(room.AreaId ?? room.Name)">
+					<b>@room.Name</b>
+					@if (room.IsHandHeld)
+					{
+						<Chip Kind="hand" Word="by hand" />
+					}
+					<span class="pct">
+						<i class="lampdot" aria-hidden="true"></i>
+						<span>@Celsius(target)</span>
+					</span>
+				</a>
+			}
+			else
+			{
+				<a class="tile dark" href="@HouseView.RoomHref(room.AreaId)" @key="@(room.AreaId ?? room.Name)">
+					<b>@room.Name</b>
+					<span class="pct"><i class="lampdot dark" aria-hidden="true"></i>not heard from</span>
+				</a>
+			}
+		}
+	</div>
+
+	@if (Hidden is { } hidden)
+	{
+		<p class="d2-hidden">@hidden.Lead <a href="settings?section=areas">@hidden.LinkText</a>.</p>
+	}
+</section>
+
+@code {
+	[Parameter, EditorRequired]
+	public IReadOnlyList<RoomTile> Rooms { get; set; } = [];
+
+	[Parameter]
+	public HiddenRoomsNote? Hidden { get; set; }
+
+	// A temperature's own colour in place of a lamp's glow; TemperatureColour writes invariant integers.
+	private static string Paint(double celsius) => $"--lampc: {TemperatureColour.Css(celsius)}; --lvl: 1";
+
+	private static string Celsius(double celsius) => $"{celsius.ToString("0.#", CultureInfo.CurrentCulture)} °C";
+}

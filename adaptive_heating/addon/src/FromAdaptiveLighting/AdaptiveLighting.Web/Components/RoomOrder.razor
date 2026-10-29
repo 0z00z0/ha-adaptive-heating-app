@@ -1,0 +1,36 @@
+@namespace Adaptive.UI
+@* The two controls that move a room up or down its floor. Shared: both designs draw the same rooms list from
+   the same model, and the arrows are inline rather than sprite glyphs because only one design renders the
+   sprite. A room alone on its floor has nowhere to move, so it gets no controls rather than two dead ones. *@
+
+@if (Model.CanMoveRoomUp(Area) || Model.CanMoveRoomDown(Area))
+{
+	<span class="roword">
+		<button type="button"
+				class="roword-btn"
+				aria-label="@Model.MoveUpLabel(Area)"
+				title="@Model.MoveUpLabel(Area)"
+				disabled="@(!Model.CanMoveRoomUp(Area))"
+				@onclick="() => Model.MoveRoomUp(Area)">
+			<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4 10l4-4 4 4" /></svg>
+		</button>
+		<button type="button"
+				class="roword-btn"
+				aria-label="@Model.MoveDownLabel(Area)"
+				title="@Model.MoveDownLabel(Area)"
+				disabled="@(!Model.CanMoveRoomDown(Area))"
+				@onclick="() => Model.MoveRoomDown(Area)">
+			<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4 6l4 4 4-4" /></svg>
+		</button>
+	</span>
+}
+
+@code {
+	/// <summary>The page model the rooms list is drawn from.</summary>
+	[Parameter, EditorRequired]
+	public HousePageModel Model { get; set; } = null!;
+
+	/// <summary>The room these controls move.</summary>
+	[Parameter, EditorRequired]
+	public AreaConfig Area { get; set; } = null!;
+}

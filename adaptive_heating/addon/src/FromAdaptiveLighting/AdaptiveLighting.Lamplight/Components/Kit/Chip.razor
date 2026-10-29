@@ -1,0 +1,26 @@
+<span class="@CssClass"
+	  role="@(Bare ? "img" : null)"
+	  aria-label="@(Bare ? Word : null)"
+	  title="@(Bare ? Word : null)">
+	@if (!Bare)
+	{
+		@Word
+	}
+</span>
+
+@code {
+	/// <summary>The state family: auto, dim, hand, idle or ok — a CSS <c>st-*</c> suffix, nothing derived here.</summary>
+	[Parameter, EditorRequired]
+	public string Kind { get; set; } = "";
+
+	[Parameter, EditorRequired]
+	public string Word { get; set; } = "";
+
+	/// <summary>The mark alone, no well: for a dense list such as a timeline lane.</summary>
+	[Parameter]
+	public bool Bare { get; set; }
+
+	// A single expression: an implicit expression immediately followed by an explicit one, with no literal
+	// text between them, is not reliably parsed inside an HTML attribute value.
+	private string CssClass => $"chip st-{Kind}{(Bare ? " bare" : "")}";
+}

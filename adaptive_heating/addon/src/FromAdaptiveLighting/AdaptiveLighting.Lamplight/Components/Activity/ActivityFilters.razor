@@ -1,0 +1,80 @@
+@using AdaptiveLighting.Lamplight.Components.Kit
+@* The room filter, the category chips, the pending line and the hidden-reports note: everything above the
+   day-grouped rows. Takes values and raises events, same as the kit; ActivityPageModel stays with the page. *@
+
+<div class="act-controls">
+	<div class="filters">
+		<select class="room-select" aria-label="Room" @bind:get="Room" @bind:set="OnRoomChanged">
+			<option value="@ActivityView.AllRooms">All rooms</option>
+			@foreach (ActivityRoomOption room in RoomOptions)
+			{
+				<option value="@room.Key">@room.Name</option>
+			}
+		</select>
+
+		<div class="cats" role="group" aria-label="Show these categories">
+			@foreach (ActivityFilterChip chip in Chips)
+			{
+				<button type="button"
+						class="cat"
+						aria-pressed="@(chip.IsOn ? "true" : "false")"
+						title="@chip.Title"
+						@onclick="() => Toggle.InvokeAsync(chip.Category)">
+					@chip.Label<b>@chip.Count</b>
+				</button>
+			}
+		</div>
+	</div>
+
+	@if (Pending > 0)
+	{
+		<button type="button" class="pending" @onclick="ShowNew">@PendingWord</button>
+	}
+
+	@if (HiddenNote is { Length: > 0 } hidden)
+	{
+		<p class="hidden-note">
+			<span class="info-line">@hidden <Info Label="Hidden">@HiddenWhy</Info></span>
+			<button type="button" @onclick="ShowEverything">Show everything</button>
+		</p>
+	}
+</div>
+
+@code {
+	[Parameter, EditorRequired]
+	public IReadOnlyList<ActivityRoomOption> RoomOptions { get; set; } = [];
+
+	/// <summary>The chosen room, or <see cref="ActivityView.AllRooms"/> for every room.</summary>
+	[Parameter, EditorRequired]
+	public string Room { get; set; } = ActivityView.AllRooms;
+
+	[Parameter, EditorRequired]
+	public EventCallback<string?> RoomChanged { get; set; }
+
+	[Parameter, EditorRequired]
+	public IReadOnlyList<ActivityFilterChip> Chips { get; set; } = [];
+
+	[Parameter, EditorRequired]
+	public EventCallback<ActivityCategory> Toggle { get; set; }
+
+	[Parameter]
+	public long Pending { get; set; }
+
+	[Parameter, EditorRequired]
+	public string PendingWord { get; set; } = "";
+
+	[Parameter, EditorRequired]
+	public EventCallback ShowNew { get; set; }
+
+	[Parameter]
+	public string? HiddenNote { get; set; }
+
+	/// <summary>Why the hidden reports are off the page, behind the note's (i).</summary>
+	[Parameter]
+	public string? HiddenWhy { get; set; }
+
+	[Parameter, EditorRequired]
+	public EventCallback ShowEverything { get; set; }
+
+	private Task OnRoomChanged(string room) => RoomChanged.InvokeAsync(room);
+}

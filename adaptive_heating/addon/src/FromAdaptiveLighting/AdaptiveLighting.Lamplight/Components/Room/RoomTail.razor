@@ -1,0 +1,128 @@
+@using System.Globalization
+@using AdaptiveLighting.Lamplight.Components.Kit
+@using AdaptiveLighting.Web.Components
+
+@* "This room" and "What happened here": the two folds after the settings groups, in that order. *@
+
+<p class="tail-lab">This room</p>
+
+<Fold Id="identity" Title="This room" Summary="@Model.RoomName" Open="@IdentityOpen" OpenChanged="@IdentityOpenChanged">
+	<div class="rows">
+		@* The way out, beside the head's switch, where a running room's settings are. *@
+		<Row Label="Adaptive Heating" Value="" IsWide="true">
+			<Help>@Model.SwitchTitle</Help>
+			<ChildContent>
+				<Pair Name="Adaptive Heating"
+					  ShowStatus="false"
+					  Word="@(Model.IsEnabled ? "ON" : "OFF")"
+					  WordKind="@(Model.IsEnabled ? "ok" : "off")"
+					  Options="@EnableOptions"
+					  Current="@(Model.IsEnabled ? 0 : 1)"
+					  OnSelect="OnEnableSelect" />
+			</ChildContent>
+		</Row>
+
+		<Row Label="Name" Value="@(Model.OwnName is { Length: > 0 } own ? own : Model.RoomName)" IsWide="true">
+			<Help>Leave it empty to follow the Home Assistant area's name.</Help>
+			<ChildContent>
+				<input type="text" class="cell" value="@Model.OwnName" placeholder="@Model.RoomName" aria-label="Name" @onchange="@(args => Model.SetOwnName(args.Value as string))" />
+			</ChildContent>
+		</Row>
+
+		<Row Label="Home Assistant area" Value="@(Model.AreaId ?? "")" IsWide="true">
+			<Help>Changing it looks for heaters and sensors again. The room keeps its thermostat, its history and what it has learnt. An area whose heaters already make a room is refused, so move the room before its heaters.</Help>
+			<ChildContent>
+				<AreaPicker Value="@Model.AreaId" ValueChanged="@Model.ChangeArea" Areas="@Model.Areas" Required="true" />
+			</ChildContent>
+		</Row>
+	</div>
+
+	@* The first design's room gear card carries these; Lamplight's room page has no other place for them. *@
+	@if (Model.SetupOpen)
+	{
+		<SetupAgainPanel Config="@Model.Document"
+						 PreTicked="@Model.SetupScope"
+						 PlanFor="@Model.PlanSetup"
+						 NameOf="@Model.AreaNameOf"
+						 Confirmed="@Model.ApplySetup"
+						 Cancelled="@Model.CancelSetup"
+						 CommitNote="The rebuild is saved as soon as you confirm, and cannot be undone from here." />
+	}
+	else if (Model.Removing)
+	{
+		<div class="notice warn info-host">
+			<span class="info-line">
+				<strong>Remove @Model.RoomName?</strong>
+				<InfoPopover Label="Remove" Severity="InfoSeverity.Warn">
+					The room stops being managed and its settings are gone. Its heaters and sensors stay exactly as
+					they are in Home Assistant &mdash; this add-on simply stops touching them. Setting the room up
+					again later starts from scratch.
+				</InfoPopover>
+			</span>
+			<div class="panel-actions">
+				<button type="button" class="danger" @onclick="Model.Remove">Remove this room</button>
+				<button type="button" @onclick="Model.KeepRoom">Keep it</button>
+			</div>
+		</div>
+	}
+	else
+	{
+		<div class="panel-actions room-actions">
+			@if (Model.AreaId is { Length: > 0 })
+			{
+				<button type="button" @onclick="Model.OpenSetup" disabled="@(!Model.HomeAssistantIsAnswering)">Set this room up again</button>
+			}
+			<button type="button" class="danger" @onclick="Model.AskRemove">Remove this room</button>
+		</div>
+	}
+</Fold>
+
+<Fold Id="log" Title="What happened here" Summary="@LogSummary" Open="@LogOpen" OpenChanged="@LogOpenChanged">
+	@if (Model.RoomLog is { Count: > 0 } rows)
+	{
+		<ol class="log">
+			@foreach (AdaptiveHeating.Page.Settings.RoomLogRow row in rows)
+			{
+				<li @key="row.Sequence">
+					<time datetime="@row.At.ToString("o", CultureInfo.InvariantCulture)">@RoomFacts.Clock(row.At)</time>
+					<span>@row.What</span>
+					@if (row.Why is { Length: > 0 } why)
+					{
+						<span class="why">@why</span>
+					}
+				</li>
+			}
+		</ol>
+		<p class="d2-foot">@Model.LogFoot</p>
+	}
+	else
+	{
+		<p class="lede">Nothing recorded here yet.</p>
+	}
+	<a class="morelink" href="activity">All activity &rsaquo;</a>
+</Fold>
+
+@code {
+	[Parameter, EditorRequired]
+	public RoomPageModel Model { get; set; } = default!;
+
+	[Parameter]
+	public bool IdentityOpen { get; set; }
+
+	[Parameter]
+	public EventCallback<bool> IdentityOpenChanged { get; set; }
+
+	[Parameter]
+	public bool LogOpen { get; set; }
+
+	[Parameter]
+	public EventCallback<bool> LogOpenChanged { get; set; }
+
+	private string? LogSummary => Model.RoomLog is { Count: > 0 } rows ? rows[0].What : null;
+
+	private static readonly IReadOnlyList<string> EnableOptions = ["On", "Off"];
+
+	// Pressing the side already pressed must do nothing; this is a flip, not a wall switch.
+	private Task OnEnableSelect(int index) =>
+		index == (Model.IsEnabled ? 0 : 1) ? Task.CompletedTask : Model.ToggleEnabled();
+}

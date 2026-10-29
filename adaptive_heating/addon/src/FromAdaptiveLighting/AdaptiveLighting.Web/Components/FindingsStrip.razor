@@ -1,0 +1,51 @@
+@namespace Adaptive.UI
+@* The counts are the resolver's own, after the include label, the group opening and the availability gate, so
+   the strip reports what the engine will run. *@
+
+<div class="comm-strip" role="list" aria-label="What setting up found">
+	@foreach ((int Count, string Word) fact in Facts)
+	{
+		<div class="comm-fact" role="listitem">
+			<div class="n">@fact.Count</div>
+			<div class="w">@fact.Word</div>
+		</div>
+	}
+
+	@* Absent and not zeroed for a house with no select. *@
+	@if (HouseMode is { Length: > 0 } mode)
+	{
+		<div class="comm-fact mode" role="listitem">
+			<div>
+				<div class="n">@mode</div>
+				<div class="w">house mode · adopted</div>
+			</div>
+		</div>
+	}
+</div>
+
+@code {
+	[Parameter]
+	public int Rooms { get; set; }
+
+	[Parameter]
+	public int Heaters { get; set; }
+
+	[Parameter]
+	public int Sensors { get; set; }
+
+	/// <summary>How many people decide Home and Away.</summary>
+	[Parameter]
+	public int People { get; set; }
+
+	/// <summary>The adopted select's friendly name, not its entity id.</summary>
+	[Parameter]
+	public string? HouseMode { get; set; }
+
+	private IReadOnlyList<(int Count, string Word)> Facts =>
+	[
+		(Rooms, Rooms == 1 ? "room" : "rooms"),
+		(Heaters, Heaters == 1 ? "heater" : "heaters"),
+		(Sensors, Sensors == 1 ? "temperature sensor" : "temperature sensors"),
+		(People, People == 1 ? "person" : "people")
+	];
+}

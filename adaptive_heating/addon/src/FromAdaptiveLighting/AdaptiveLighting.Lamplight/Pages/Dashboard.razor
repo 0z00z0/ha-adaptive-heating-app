@@ -1,0 +1,53 @@
+@page "/"
+@implements IDisposable
+@using AdaptiveLighting.Lamplight.Components.Dashboard
+@using AdaptiveLighting.Web.Components
+@inject AreaSnapshotCache Cache
+@inject IActivityRecord Log
+@inject HeatingDocumentHost Engine
+@inject ModeService Service
+@inject HaCatalog Catalog
+@inject TheHouseholdClock Household
+@inject ILogger<Dashboard> Logger
+
+<PageTitle>Dashboard &mdash; Adaptive Heating</PageTitle>
+
+<h1 class="sr-only">Dashboard</h1>
+
+<DashboardNotices Model="_model" />
+
+@if (_model.AwaitingRoomChoice)
+{
+	@* Heating's first-run board, where lighting's dashboard says rooms are chosen. *@
+	<CommissioningBoard People="@_model.People" Committed="@_model.OnCommissioned" />
+}
+else
+{
+	<HouseCard Model="_model" />
+
+	@* On the clock: the now-line walks and the tiles follow each report. *@
+	<TickRegion Clock="@_model">
+		<Timeline Model="_model" />
+		<RoomTiles Rooms="_model.Rooms" Hidden="_model.HiddenRooms" />
+		<WorthKnowing Model="_model" />
+	</TickRegion>
+}
+
+@code {
+	private DashboardPageModel _model = default!;
+
+	/// <inheritdoc/>
+	protected override void OnInitialized()
+	{
+		_model = new DashboardPageModel(Cache, Log, Engine, Service, Catalog, Household.Zone, Logger, work => InvokeAsync(work));
+		_model.Changed += StateHasChanged;
+		_model.Start();
+	}
+
+	/// <inheritdoc/>
+	public void Dispose()
+	{
+		_model.Changed -= StateHasChanged;
+		_model.Dispose();
+	}
+}

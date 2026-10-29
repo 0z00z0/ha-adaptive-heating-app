@@ -1,0 +1,39 @@
+@using AdaptiveLighting.Lamplight.Components.Kit
+@* One row of the activity record: What and Why as one line each; a house-wide report names no room. *@
+@using System.Globalization
+
+<li class="act">
+	<time datetime="@Row.At.ToString("o", CultureInfo.InvariantCulture)">@RoomFacts.Clock(Row.At)</time>
+
+	@if (Row.IsAboutTheHouse)
+	{
+		<span class="act-room">House</span>
+	}
+	else if (HouseView.RoomHref(Row.RoomId) is { } href)
+	{
+		<a class="act-room" href="@href">@Row.Room</a>
+	}
+	else
+	{
+		<span class="act-room">@Row.Room</span>
+	}
+
+	<span class="act-what">
+		@Row.Line.What
+		@if (Row.Line.More is { Length: > 0 } more)
+		{
+			<Info Label="@Row.Line.What">@more</Info>
+		}
+	</span>
+
+	@if (Row.Line.Why is { Length: > 0 } why)
+	{
+		<span class="act-why">@why</span>
+	}
+</li>
+
+@code {
+	[Parameter, EditorRequired]
+	public ActivityRow Row { get; set; } = default!;
+
+}

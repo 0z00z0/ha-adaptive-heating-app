@@ -1,0 +1,42 @@
+@namespace Adaptive.UI
+@* Lamplight's "Schedule" tab: the same leaf controls today's HouseScheduleSection wires, over Lamplight's own
+   glass/fold shell instead of GroupFold. *@
+@using AdaptiveLighting.Lamplight.Components.Kit
+@using AdaptiveLighting.Web.Components
+
+<h1 class="pagetitle info-line">
+	Schedule
+	<Info Label="Schedule">How warm the house is through the day &mdash; one schedule for the whole house. A room can set its own temperature for a period on its own page.</Info>
+</h1>
+
+<PeriodsEditor Periods="@Model.Periods"
+			   Changed="@Model.Revalidate"
+			   HouseModeOptions="@Model.HouseModeOptionValues"
+			   HouseMode="@Model.HouseMode"
+			   Global="@Model.Global" />
+
+<Fold Id="periodselect" Title="Dropdown helper" Summary="@Model.PeriodSelectSummary" Open="@_periodSelectOpen" OpenChanged="@(open => _periodSelectOpen = open)">
+	<PeriodSelectPanel Global="@Model.Global"
+						Periods="@Model.Periods"
+						InputSelects="@Model.InputSelects"
+						LiveOptions="@Model.LivePeriodSelectOptions"
+						ActiveValue="@Model.ActivePeriodValue"
+						IsAvailable="@Model.PeriodSelectIsAvailable"
+						IsReady="@Model.HomeAssistantIsAnswering"
+						EmptyNote="@Model.PeriodSelectEmptyNote"
+						Lookup="@Model.Lookup"
+						EntityChanged="@Model.SetPeriodSelectEntity"
+						Changed="@Model.Revalidate" />
+</Fold>
+
+@code {
+	[Parameter, EditorRequired]
+	public HousePageModel Model { get; set; } = null!;
+
+	// Starts open exactly when GroupFold's Open="@Model.PeriodSelectConnected" would today — once already in
+	// use, it decides what the table above means — then stays a plain hand-toggled fold like any other.
+	private bool _periodSelectOpen;
+
+	/// <inheritdoc/>
+	protected override void OnInitialized() => _periodSelectOpen = Model.PeriodSelectConnected;
+}

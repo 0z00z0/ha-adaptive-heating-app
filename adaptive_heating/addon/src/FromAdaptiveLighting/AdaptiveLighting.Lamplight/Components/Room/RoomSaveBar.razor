@@ -1,0 +1,63 @@
+@using AdaptiveLighting.Web.Components
+
+@* The save line at the foot of the page: what SaveState is saying, in words, plus a refused save's detail and
+   an area-level error. Classes are this design's own — SaveState names a meaning, never a class. *@
+
+<TickRegion Clock="@Model">
+	@if (Model.Failure is { } failure)
+	{
+		<div class="notice bad">
+			<strong>Not saved.</strong> @failure.Message
+			@if (failure.Validation.Errors.Count > 0)
+			{
+				<ul>
+					@foreach (string error in failure.Validation.Errors)
+					{
+						<li>@error</li>
+					}
+				</ul>
+			}
+			<div class="btnrow">
+				@if (failure.Status is not SaveStatus.Conflicted)
+				{
+					<button type="button" class="btn" @onclick="Model.Commit">Try again</button>
+				}
+				<button type="button" class="btn @(failure.Status is SaveStatus.Conflicted ? "primary" : null)" @onclick="Model.Discard">
+					@(failure.Status is SaveStatus.Conflicted ? "Reload this room" : "Discard my changes")
+				</button>
+			</div>
+		</div>
+	}
+	else if (Model.AreaError is { } mine)
+	{
+		<div class="notice warn">
+			<strong>This room will be skipped.</strong> @mine.Message
+		</div>
+	}
+
+	<div class="savebar @SaveClass" role="status">
+		<span>@Model.SaveLine</span>
+		@if (Model.SaveConfirmation.TextAt(Model.Now) is { Length: > 0 } confirmed)
+		{
+			<span>@confirmed</span>
+		}
+		@if (Model.Dirty)
+		{
+			<button type="button" class="btn primary" @onclick="Model.Commit">Save now</button>
+		}
+	</div>
+</TickRegion>
+
+@code {
+	[Parameter, EditorRequired]
+	public RoomPageModel Model { get; set; } = default!;
+
+	// This design's own names for the four meanings SaveState answers with.
+	private string SaveClass => Model.SaveState switch
+	{
+		RoomSaveState.Refused => "bad",
+		RoomSaveState.Waiting => "pending",
+		RoomSaveState.Saved => "ok",
+		_ => ""
+	};
+}

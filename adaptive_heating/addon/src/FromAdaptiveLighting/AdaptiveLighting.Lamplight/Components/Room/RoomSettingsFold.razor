@@ -1,0 +1,192 @@
+@using AdaptiveLighting.Lamplight.Components.Kit
+@using AdaptiveLighting.Web.Components
+@using AdaptiveLighting.Configuration
+
+@* The room's own settings: the one house default a room overrides, then what its sensors are held to. Only one
+   row opens at a time, tracked here and nowhere the model needs to know about. *@
+
+<Fold Id="@Id"
+	  Title="This room's settings"
+	  Summary="@Summary"
+	  Count="@(OwnCount > 0 ? OwnCount : null)"
+	  CountTitle="Set for this room"
+	  Open="@Open"
+	  OpenChanged="@OpenChanged">
+	<div class="rows">
+		<Row Label="Hold a change at the thermostat for"
+			 Value="@($"{Model.HoldMinutes} min")"
+			 IsOwn="@Model.HoldIsOwn"
+			 HouseText="@Model.HoldHouseText"
+			 IsEditing="@(_editingKey == "hold")"
+			 OnToggleEdit="@(() => ToggleEdit("hold"))"
+			 OnRevert="@(() => Model.SetHoldMinutes(null))">
+			<Help>After this long the mode's temperature takes the room back.</Help>
+			<ChildContent>
+				<Stepper Value="@Model.HoldMinutes"
+						 Text="@($"{Model.HoldMinutes} min")"
+						 Label="Hold a change at the thermostat for"
+						 Step="15"
+						 Min="15"
+						 Max="1440"
+						 IsOwn="@Model.HoldIsOwn"
+						 ValueChanged="@(value => Model.SetHoldMinutes((int)value))" />
+			</ChildContent>
+		</Row>
+
+		@if (Model.OffersNightSetback)
+		{
+			<Row Label="Night setback"
+				 Value="@(Model.NightSetbackOn ? Model.NightSetbackNow ?? "On" : "Off")"
+				 Severity="@(Model.NightSetbackThermostatFloor is null ? InfoSeverity.Neutral : InfoSeverity.Warn)"
+				 IsEditing="@(_editingKey == "night-setback")"
+				 OnToggleEdit="@(() => ToggleEdit("night-setback"))">
+				<Help>
+					On: while the house is in a sleep mode marked for it, the room is lowered as far as saves the most power and heated again in time for the next period.
+					@if (Model.NightSetbackThermostatFloor is { } floor)
+					{
+						@($" The thermostat goes no lower than {Degrees(floor)}, so tonight's setback stops there.")
+					}
+				</Help>
+				<ChildContent>
+					<button type="button"
+							class="toggle @(Model.NightSetbackOn ? "on" : null)"
+							role="switch"
+							aria-checked="@(Model.NightSetbackOn ? "true" : "false")"
+							aria-label="Night setback"
+							@onclick="() => Model.SetNightSetback(!Model.NightSetbackOn)">
+						<span class="knob" aria-hidden="true"></span>
+					</button>
+				</ChildContent>
+			</Row>
+
+			<Row Label="Lowest night temperature"
+				 Value="@Degrees(Model.LowestNightTemperature)"
+				 IsOwn="@Model.LowestNightIsOwn"
+				 HouseText="@Model.LowestNightHouseText"
+				 IsEditing="@(_editingKey == "lowest-night")"
+				 OnToggleEdit="@(() => ToggleEdit("lowest-night"))"
+				 OnRevert="@(() => Model.SetLowestNightTemperature(null))">
+				<Help>A night setback never lowers the room below this, nor below its frost temperature.</Help>
+				<ChildContent>
+					<Stepper Value="@Model.LowestNightTemperature"
+							 Text="@Degrees(Model.LowestNightTemperature)"
+							 Label="Lowest night temperature"
+							 Step="0.5"
+							 Min="-20"
+							 Max="30"
+							 IsOwn="@Model.LowestNightIsOwn"
+							 ValueChanged="@(value => Model.SetLowestNightTemperature(value))" />
+				</ChildContent>
+			</Row>
+
+			<Row Label="Frost temperature"
+				 Value="@Model.FrostText"
+				 IsOwn="@Model.FrostIsOwn"
+				 HouseText="@Model.FrostHouseText"
+				 IsEditing="@(_editingKey == "frost")"
+				 OnToggleEdit="@(() => ToggleEdit("frost"))"
+				 OnRevert="@Model.RevertFrost">
+				<Help>A night setback never lowers the room below this. With no limit, only the lowest night temperature holds it.</Help>
+				<ChildContent>
+					@if (Model.FrostProtection)
+					{
+						<Stepper Value="@Model.FrostTemperature"
+								 Text="@Degrees(Model.FrostTemperature)"
+								 Label="Frost temperature"
+								 Step="0.5"
+								 Min="-20"
+								 Max="30"
+								 IsOwn="@Model.FrostIsOwn"
+								 ValueChanged="@(value => Model.SetFrostTemperature(value))" />
+					}
+					<label class="checks">
+						<input type="checkbox" checked="@(!Model.FrostProtection)" @onchange="@(args => Model.SetFrostProtection(args.Value is not true))" />
+						No limit
+					</label>
+				</ChildContent>
+			</Row>
+		}
+
+		@if (Model.SensorSettings is { } sensors)
+		{
+			<Row Label="Sensor counts for" Value="@Hours(sensors.FreshWindow)" IsEditing="@(_editingKey == "fresh")" OnToggleEdit="@(() => ToggleEdit("fresh"))">
+				<Help>How recently a sensor must have reported to count.</Help>
+				<ChildContent>
+					<Stepper Value="@sensors.FreshWindow.TotalHours" Text="@Hours(sensors.FreshWindow)" Label="Sensor counts for" Step="0.25" Min="0.25" Max="24"
+							 ValueChanged="@(value => Model.SetSensorSettings(held => held with { FreshWindow = TimeSpan.FromHours(value) }))" />
+				</ChildContent>
+			</Row>
+
+			<Row Label="Stuck after" Value="@Hours(sensors.StuckWindow)" IsEditing="@(_editingKey == "stuck")" OnToggleEdit="@(() => ToggleEdit("stuck"))">
+				<Help>How long a reading may sit at one value before it reads as stuck.</Help>
+				<ChildContent>
+					<Stepper Value="@sensors.StuckWindow.TotalHours" Text="@Hours(sensors.StuckWindow)" Label="Stuck after" Step="1" Min="1" Max="48"
+							 ValueChanged="@(value => Model.SetSensorSettings(held => held with { StuckWindow = TimeSpan.FromHours(value) }))" />
+				</ChildContent>
+			</Row>
+
+			<Row Label="Sensors may differ by" Value="@Degrees(sensors.Spread)" IsEditing="@(_editingKey == "spread")" OnToggleEdit="@(() => ToggleEdit("spread"))">
+				<Help>How far a fresh reading may sit from the others in the same room.</Help>
+				<ChildContent>
+					<Stepper Value="@sensors.Spread" Text="@Degrees(sensors.Spread)" Label="Sensors may differ by" Step="0.5" Min="0.5" Max="10"
+							 ValueChanged="@(value => Model.SetSensorSettings(held => held with { Spread = value }))" />
+				</ChildContent>
+			</Row>
+
+			<Row Label="Window waits" Value="@Minutes(sensors.WindowDelay)" IsEditing="@(_editingKey == "window")" OnToggleEdit="@(() => ToggleEdit("window"))">
+				<Help>The delay each way before an open window stops the room and a closed one resumes it.</Help>
+				<ChildContent>
+					<Stepper Value="@sensors.WindowDelay.TotalMinutes" Text="@Minutes(sensors.WindowDelay)" Label="Window waits" Step="1" Min="0" Max="60"
+							 ValueChanged="@(value => Model.SetSensorSettings(held => held with { WindowDelay = TimeSpan.FromMinutes(value) }))" />
+				</ChildContent>
+			</Row>
+		}
+	</div>
+
+	@if (Model.SensorRefused is { Length: > 0 } refused)
+	{
+		<div class="notice bad">@refused</div>
+	}
+
+	@ChildContent
+</Fold>
+
+@code {
+	[Parameter, EditorRequired]
+	public string Id { get; set; } = "";
+
+	[Parameter, EditorRequired]
+	public RoomPageModel Model { get; set; } = default!;
+
+	[Parameter]
+	public bool Open { get; set; }
+
+	[Parameter]
+	public EventCallback<bool> OpenChanged { get; set; }
+
+	/// <summary>Drawn at the foot of the fold's rows: pause, hold and who counts as a hand.</summary>
+	[Parameter]
+	public RenderFragment? ChildContent { get; set; }
+
+	private string? _editingKey;
+
+	private int OwnCount =>
+		(Model.HoldIsOwn ? 1 : 0)
+		+ (Model.AutomationsAreOwn ? 1 : 0)
+		+ (Model.NightSetbackOn ? 1 : 0)
+		+ (Model.LowestNightIsOwn ? 1 : 0)
+		+ (Model.FrostIsOwn ? 1 : 0)
+		+ (Model.PauseWhenOn.Count > 0 ? 1 : 0)
+		+ (Model.HoldWhenOn.Count > 0 ? 1 : 0);
+
+	private string Summary => $"{Model.HoldMinutes} min hold";
+
+	private void ToggleEdit(string key) =>
+		_editingKey = string.Equals(_editingKey, key, StringComparison.Ordinal) ? null : key;
+
+	private static string Hours(TimeSpan span) => $"{span.TotalHours.ToString("0.##", System.Globalization.CultureInfo.CurrentCulture)} h";
+
+	private static string Minutes(TimeSpan span) => $"{span.TotalMinutes.ToString("0", System.Globalization.CultureInfo.CurrentCulture)} min";
+
+	private static string Degrees(double value) => $"{value.ToString("0.#", System.Globalization.CultureInfo.CurrentCulture)} °C";
+}

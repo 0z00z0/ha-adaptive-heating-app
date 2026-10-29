@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+	<PropertyGroup>
+		<RootNamespace>AdaptiveHeating.Page</RootNamespace>
+		<Description>The heating settings page: the components, the colour tokens, the light-and-dark script and the base address the page resolves per request. A Razor Class Library with no host of its own, so the add-on and the render host both serve the same markup.</Description>
+		<AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+		<GenerateDocumentationFile>false</GenerateDocumentationFile>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- Stamp, Stamped and LearntNumber come from the planner, so the page never keeps a second copy of them. -->
+		<ProjectReference Include="..\AdaptiveHeating.Planner\AdaptiveHeating.Planner.csproj" />
+		<ProjectReference Include="..\AdaptiveHeating.Core\AdaptiveHeating.Core.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- Copied from Adaptive Lighting's AdaptiveLighting.Web.
+		     Compiled here and nowhere else; the core copies compile in AdaptiveHeating.Core. -->
+		<Compile Include="..\FromAdaptiveLighting\AdaptiveLighting.Web\**\*.cs" />
+
+		<!-- Linked under the lighting project's own folder name, so the _Imports.razor beside each link gives the
+		     components lighting's namespaces. A link moved elsewhere changes every copied component's namespace. -->
+		<Content Include="..\FromAdaptiveLighting\AdaptiveLighting.Web\**\*.razor" Link="AdaptiveLighting.Web\%(RecursiveDir)%(Filename)%(Extension)" />
+		<Content Include="..\FromAdaptiveLighting\AdaptiveLighting.Lamplight\**\*.razor" Link="AdaptiveLighting.Lamplight\%(RecursiveDir)%(Filename)%(Extension)" />
+
+		<!-- Served at _content/AdaptiveHeating.Page/: the slider's script, and the script that keeps one help bubble open.
+		     Each names its own content root: without it the development host looks for the file in this project's wwwroot
+		     and serves it empty. -->
+		<Content Include="..\FromAdaptiveLighting\AdaptiveLighting.Web\wwwroot\preset-slider.js" Link="wwwroot\%(Filename)%(Extension)" ContentRoot="$(MSBuildProjectDirectory)\..\FromAdaptiveLighting\AdaptiveLighting.Web\wwwroot\" />
+		<Content Include="..\FromAdaptiveLighting\AdaptiveLighting.Lamplight\wwwroot\lamplight-info.js" Link="wwwroot\%(Filename)%(Extension)" ContentRoot="$(MSBuildProjectDirectory)\..\FromAdaptiveLighting\AdaptiveLighting.Lamplight\wwwroot\" />
+
+		<!-- Lighting's two stylesheets, unchanged, under heating.css. lamplight.css finds its typefaces at fonts/ beside it. -->
+		<Content Include="..\FromAdaptiveLighting\AdaptiveLighting.Web\wwwroot\controls.css" Link="wwwroot\%(Filename)%(Extension)" ContentRoot="$(MSBuildProjectDirectory)\..\FromAdaptiveLighting\AdaptiveLighting.Web\wwwroot\" />
+		<Content Include="..\FromAdaptiveLighting\AdaptiveLighting.Lamplight\wwwroot\lamplight.css" Link="wwwroot\%(Filename)%(Extension)" ContentRoot="$(MSBuildProjectDirectory)\..\FromAdaptiveLighting\AdaptiveLighting.Lamplight\wwwroot\" />
+		<Content Include="..\FromAdaptiveLighting\AdaptiveLighting.Lamplight\wwwroot\fonts\**\*" Link="wwwroot\fonts\%(RecursiveDir)%(Filename)%(Extension)" ContentRoot="$(MSBuildProjectDirectory)\..\FromAdaptiveLighting\AdaptiveLighting.Lamplight\wwwroot\" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Update="Resources\PageStrings.resx">
+			<Generator></Generator>
+		</EmbeddedResource>
+	</ItemGroup>
+
+</Project>

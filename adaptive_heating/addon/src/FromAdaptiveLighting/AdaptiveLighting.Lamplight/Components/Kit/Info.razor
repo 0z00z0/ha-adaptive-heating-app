@@ -1,0 +1,45 @@
+@* Renders nothing without help text, matching the draft's info(label, help): a button for a click and a
+   keyboard, never a hover-only title. *@
+@if (ChildContent is not null)
+{
+	<span class="info" @onkeydown="OnKeyDown">
+		<button type="button"
+				class="info-i @InfoSeverityClass.Of(Severity)"
+				aria-expanded="@(_open ? "true" : "false")"
+				aria-label="@($"About {Label}")"
+				@onclick="Toggle"
+				@onclick:stopPropagation="true">i</button>
+
+		@if (_open)
+		{
+			<span class="info-pop" role="note">
+				<b>@Label</b>
+				@ChildContent
+			</span>
+		}
+	</span>
+}
+
+@code {
+	/// <summary>What the icon explains; titles the popover.</summary>
+	[Parameter, EditorRequired]
+	public string Label { get; set; } = "";
+
+	/// <summary>The help text. Null renders nothing at all — a row with no help gets no (i).</summary>
+	[Parameter]
+	public RenderFragment? ChildContent { get; set; }
+
+	/// <summary>The icon's colour: neutral help, yellow worth knowing, red needs attention.</summary>
+	[Parameter]
+	public InfoSeverity Severity { get; set; }
+
+	private bool _open;
+
+	private void Toggle() => _open = !_open;
+
+	private void OnKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs args)
+	{
+		if (args.Key == "Escape")
+			_open = false;
+	}
+}

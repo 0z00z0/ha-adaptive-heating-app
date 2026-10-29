@@ -1,0 +1,83 @@
+@inject IJSRuntime Js
+@inject ILogger<ThemeSelect> Logger
+@inject IStringLocalizer<AdaptiveHeating.Page.Resources.PageStrings> Words
+
+@* Stored in the browser and never in the document; HeatingThemes owns the list and the fallback for an
+	unknown id. A different port is a different origin, so a stored choice does not follow the page between
+	one way in and another: a per-visitor convenience and nothing more. *@
+<label class="theme-picker">
+	<span class="theme-picker-label">@Words["Theme"]</span>
+	<select class="theme-select" @bind:get="_selected" @bind:set="OnPicked">
+		<option value="@HeatingThemes.System.Id">@Words[HeatingThemes.System.NameKey]</option>
+		<optgroup label="@Words["ThemeGroupDark"]">
+			@foreach (HeatingTheme theme in HeatingThemes.All.Skip(1).Where(theme => theme.IsDark))
+			{
+				<option value="@theme.Id">@Words[theme.NameKey]</option>
+			}
+		</optgroup>
+		<optgroup label="@Words["ThemeGroupLight"]">
+			@foreach (HeatingTheme theme in HeatingThemes.All.Skip(1).Where(theme => !theme.IsDark))
+			{
+				<option value="@theme.Id">@Words[theme.NameKey]</option>
+			}
+		</optgroup>
+	</select>
+</label>
+
+@code {
+	// The first paint happens before any circuit exists, so the server cannot know what this browser stored.
+	// heating-theme.js has already painted by then, and only the select's chosen option needs correcting.
+	private string _selected = HeatingThemes.System.Id;
+
+	// An exception out of OnAfterRenderAsync or an event handler is an unhandled circuit exception, and this
+	// component sits in the layout, so it would take every page down.
+	private static bool IsSurvivable(Exception exception) =>
+		exception is JSDisconnectedException or JSException or OperationCanceledException;
+
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (!firstRender)
+		{
+			return;
+		}
+
+		string? stored;
+
+		try
+		{
+			stored = await Js.InvokeAsync<string?>("heatingTheme.stored");
+		}
+		catch (Exception exception) when (IsSurvivable(exception))
+		{
+			Logger.LogDebug(exception, "Could not read the stored theme; the picker keeps its default selection.");
+			return;
+		}
+
+		HeatingTheme theme = HeatingThemes.Resolve(stored);
+
+		if (theme.Id == _selected)
+		{
+			return;
+		}
+
+		_selected = theme.Id;
+		StateHasChanged();
+	}
+
+	// Resolved before storing, so the id written is one this build ships; the head script applies the same rule.
+	private async Task OnPicked(string picked)
+	{
+		HeatingTheme theme = HeatingThemes.Resolve(picked);
+		_selected = theme.Id;
+
+		try
+		{
+			await Js.InvokeVoidAsync("heatingTheme.apply", theme.Id);
+		}
+		catch (Exception exception) when (IsSurvivable(exception))
+		{
+			// The pick is lost, not the page; the top bar has no surface to report it on.
+			Logger.LogWarning(exception, "Could not apply the theme '{Theme}' in the browser.", theme.Id);
+		}
+	}
+}

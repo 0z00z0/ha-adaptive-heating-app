@@ -1,0 +1,48 @@
+@* The room and house page's "right now" card: warnings first, then the facts list. The draft's own CSS hides
+   the facts list on a phone, so nothing here decides that. *@
+
+<section class="glass d2-now">
+	@if (Warnings.Count > 0)
+	{
+		<ul class="warns">
+			@* Keyed so an open bubble stays with its warning while a number in its text changes. *@
+			@foreach (Warning warning in Warnings)
+			{
+				<li @key="warning.Key" class="warn-i @warning.Kind">
+					@* One marker per row: the coloured (i) when there is help, the "!" when there is none. *@
+					@if (warning.Help is null)
+					{
+						<Bang Kind="@warning.Kind" Title="@warning.Text" />
+					}
+					<span>@warning.Text</span>
+					@if (warning.Help is not null)
+					{
+						<Info Label="@warning.Text" Severity="@(warning.Kind == "bad" ? InfoSeverity.Bad : InfoSeverity.Warn)">@warning.Help</Info>
+					}
+				</li>
+			}
+		</ul>
+	}
+
+	@if (Facts.Count > 0)
+	{
+		<dl class="facts">
+			@foreach ((string label, string value) in Facts)
+			{
+				<dt>@label</dt>
+				<dd>@value</dd>
+			}
+		</dl>
+	}
+</section>
+
+@code {
+	/// <summary>A warning line: a key unique within the card, "warn" or "bad", the sentence, and optional (i) help.</summary>
+	public sealed record Warning(string Key, string Kind, string Text, RenderFragment? Help = null);
+
+	[Parameter, EditorRequired]
+	public IReadOnlyList<Warning> Warnings { get; set; } = [];
+
+	[Parameter, EditorRequired]
+	public IReadOnlyList<(string Label, string Value)> Facts { get; set; } = [];
+}

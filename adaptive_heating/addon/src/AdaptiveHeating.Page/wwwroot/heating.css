@@ -1,0 +1,172 @@
+/*
+	Heating's layer over lighting's two stylesheets, served at _content/AdaptiveHeating.Page/heating.css and linked
+	after controls.css and lamplight.css, which are copied unchanged. Layout is lighting's. What this file adds:
+	heating's colours and icons, three layout differences where lighting's text is cut or overruns, the columns a
+	lighting-only control leaves out, and the rules for the components Lamplight does not style.
+*/
+
+/* ==== T. Heating's tokens over Lamplight's themes ==== */
+/* Every palette is lamplight.css's. Heating's state colour is lighting's running colour under its own name. */
+:root { --heat: var(--auto); --heat-bg: var(--auto-bg); }
+/* ==== end T. Heating's tokens over Lamplight's themes ==== */
+
+/* ==== I. Heating's colours and icons ==== */
+.brand svg { color: var(--heat); }
+.st-heat { color: var(--heat); background: var(--heat-bg); }
+.st-heat::before { border-radius: 50%; }
+/* A temperature's own colour arrives inline as --lvl-temp; lighting's swatch mixes a kelvin. */
+.lvl-swatch { background: var(--lvl-temp, var(--off)); }
+.gchip-heater { border-left-color: var(--heat); }
+.gchip-sensor { border-left-color: var(--ok); }
+/* ==== end I. Heating's colours and icons ==== */
+
+/* ==== F. Layout differences from Lamplight ==== */
+/* Lighting cuts a long fold summary with an ellipsis; screen text is never abbreviated, so it wraps. */
+.fold-sum { overflow: visible; text-overflow: clip; white-space: normal; overflow-wrap: anywhere; text-align: right; }
+/* A log time is hh:mm:ss, which overruns lighting's 3.4em column into the line beside it. */
+.log li { grid-template-columns: 4.6em minmax(0, 1fr); }
+/* The settings file's line runs 113px past a 390px phone unbroken, so a fact wraps. */
+.facts dd { white-space: normal; overflow-wrap: anywhere; }
+/* A room's name on a lane, a report row and a tile's chip wraps where lighting cuts it with an ellipsis. */
+.tl-name { white-space: normal; }
+.tl-name span, .act-room, .tile .chip { overflow: visible; text-overflow: clip; white-space: normal; overflow-wrap: anywhere; }
+/* ==== end F. Layout differences from Lamplight ==== */
+
+/* ==== L. Columns a lighting-only control leaves out ==== */
+/* A period row has one temperature and no Test button: lighting's second rail (warmth) and its action column
+   are not drawn, so the grid holds the period and one rail. */
+.lvl { grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 780px) {
+	.lvl, .lvl-head { grid-template-columns: minmax(8rem, 0.85fr) minmax(11rem, 2fr); }
+}
+/* ==== end L. Columns a lighting-only control leaves out ==== */
+
+/* ==== C. Heating's own components ==== */
+/* A reading, not a setting: the inset surface and no pointer say so before the label is read. */
+.readout { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-width: 0; padding: 12px 14px; border-radius: var(--r); background: var(--inset); }
+.readout-label { min-width: 0; display: flex; align-items: center; gap: 7px; color: var(--ink-2); font-size: var(--t-sm); font-weight: var(--w-strong); line-height: 1.3; overflow-wrap: anywhere; }
+.readout-value { display: block; font-size: 17px; font-weight: var(--w-bold); color: var(--ink); line-height: 1.25; font-variant-numeric: tabular-nums; letter-spacing: var(--ls-dis-s); overflow-wrap: anywhere; }
+.numfield { display: inline-flex; align-items: baseline; gap: 6px; }
+
+/* The two halves' versions under the page. */
+.foot { display: flex; flex-wrap: wrap; gap: 6px 22px; padding: 4px 2px; font-size: var(--t-xs); color: var(--ink-3); }
+.foot-cell { display: inline-flex; align-items: center; gap: 6px; }
+.foot-cell b { color: var(--ink-2); font-family: var(--font-num); font-weight: var(--w-med); font-variant-numeric: tabular-nums; }
+/* ==== end C. Heating's own components ==== */
+
+/* ==== A. Components only lighting's first design draws ==== */
+/* The period folds, set up again, the room actions and the first-run board: lighting styles them in the first
+   design's app.css, which is not loaded here. The rules are that sheet's, written in Lamplight's tokens. */
+.period-fold { padding: 0; border-left: 3px solid color-mix(in srgb, var(--ok) 42%, var(--line)); }
+.period-fold.active { border-left-color: var(--accent); }
+.period-fold > *:not(summary) { margin-left: 14px; margin-right: 14px; }
+.period-summary { display: flex; align-items: center; gap: 6px 10px; flex-wrap: wrap; padding: 12px 14px; border-radius: var(--r); }
+.period-summary:hover, .period-fold[open] > .period-summary { background: var(--inset); }
+.period-fold[open] > .period-summary { border-radius: var(--r) var(--r) 0 0; border-bottom: 1px solid var(--line); margin-bottom: 10px; }
+.period-title { font-weight: var(--w-semi); font-size: var(--t-md); }
+.period-summary-hint { margin-left: auto; color: var(--ink-3); font-size: var(--t-xs); font-variant-numeric: tabular-nums; }
+
+.setup-panel { border-left: 3px solid var(--accent); }
+.setup-title { margin: 0 0 0.35rem; font-size: var(--t-md); font-weight: var(--w-strong); }
+.setup-all { display: inline-flex; align-items: center; gap: 0.35rem; margin-bottom: 8px; font-size: var(--t-sm); cursor: pointer; }
+.setup-rooms { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 0.25rem 1rem; margin: 0.5rem 0; padding: 0; list-style: none; }
+.setup-rooms label { display: flex; align-items: center; gap: 0.45rem; cursor: pointer; }
+.setup-room-name { font-weight: var(--w-semi); }
+.setup-losses, .setup-not-qualifying { margin: 0.4rem 0 0.8rem; padding-left: 1.2rem; }
+.setup-losses li, .setup-not-qualifying li { margin-bottom: 0.3rem; }
+.setup-losses .hint { display: block; }
+.area-slug { padding: 0.1rem 0.4rem; border-radius: 4px; background: var(--inset); font-family: var(--font-num); font-size: 0.75rem; color: var(--ink-3); }
+.group-fold { padding: 0; margin-bottom: 10px; }
+.group-summary { display: flex; align-items: center; gap: 0.35rem 0.75rem; flex-wrap: wrap; padding: 0.6rem 0; cursor: pointer; list-style: none; }
+.group-summary::-webkit-details-marker { display: none; }
+.group-title { font-weight: var(--w-semi); font-size: var(--t-sm); }
+.group-summary .area-chevron { margin-left: auto; }
+.room-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; }
+
+.onboarding { margin-bottom: 12px; padding: 18px 20px; border: 1px solid var(--card-line); border-radius: var(--r-big); background: var(--surface); }
+.onboarding-lead { margin: 0 0 12px; max-width: 60ch; font-size: var(--t-md); }
+.comm-strip { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 14px; }
+.comm-fact { min-width: 86px; padding: 8px 16px; border-radius: var(--r); background: var(--surface-2); text-align: center; }
+.comm-fact .n { font-family: var(--font-num); font-size: var(--t-xl); font-weight: var(--w-strong); font-variant-numeric: tabular-nums; line-height: 1.15; }
+.comm-fact.mode { display: flex; align-items: center; min-width: 0; text-align: left; }
+.comm-fact.mode .n { font-family: inherit; font-size: var(--t-md); }
+.comm-fact .w, .comm-sheet .lab, .comm-label .lab { font-size: var(--t-xs); font-weight: var(--w-bold); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
+.comm-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.comm-item { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; min-width: 150px; padding: 7px 13px; border: 1px solid var(--line); border-left: 3px solid var(--line); border-radius: var(--r); background: var(--surface-2); text-align: left; color: inherit; font: inherit; cursor: pointer; }
+.comm-item .ti { font-weight: var(--w-strong); font-size: var(--t-md); }
+.comm-item .st { font-size: var(--t-sm); color: var(--ink-3); }
+.comm-item.open { border-left-color: var(--accent); }
+.comm-item:hover { border-color: var(--accent); }
+.comm-sheet { margin: 12px 0; padding: 0; }
+.sheet-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 10px; padding: 12px 18px 2px; }
+.sheet-head .note { margin-left: auto; font-size: var(--t-sm); color: var(--ink-3); }
+.sheet-body { padding: 4px 18px 12px; }
+.sheet-actions { display: flex; flex-wrap: wrap; gap: 10px; padding: 10px 0 2px; }
+.comm-sheet .mono { font-family: var(--font-num); }
+.comm-sheet .mode-name { font-weight: var(--w-strong); }
+.comm-label { display: flex; align-items: center; flex-wrap: wrap; gap: 0.3rem 0.8rem; margin: 20px 0 6px; }
+.comm-all { display: inline-flex; align-items: center; gap: 0.35rem; margin-left: auto; font-size: var(--t-sm); cursor: pointer; }
+.comm-t { overflow: hidden; border: 1px solid var(--card-line); border-radius: var(--r-big); background: var(--surface); }
+/* One grid, shared by the head and every row, so a count and its column cannot drift apart. */
+.comm-cols, .comm-row { display: grid; grid-template-columns: 56px minmax(130px, 1.4fr) 64px 64px 88px 2fr; gap: 0 10px; align-items: center; }
+.comm-cols { padding: 8px 14px 2px; }
+.comm-cols span { font-size: var(--t-xs); font-weight: var(--w-bold); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
+.comm-row { padding: 7px 14px; border-top: 1px solid var(--line-soft); cursor: pointer; }
+.comm-row:hover, .comm-row.open { background: var(--surface-2); }
+.comm-row:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.comm-row .rn { min-width: 0; font-weight: var(--w-strong); font-size: var(--t-md); }
+.comm-row .rn code { display: block; padding: 0; background: none; font-family: var(--font-num); font-size: var(--t-xs); font-weight: var(--w-body); color: var(--ink-3); }
+.comm-row .c { font-family: var(--font-num); font-size: var(--t-sm); color: var(--ink-3); text-align: right; font-variant-numeric: tabular-nums; }
+.comm-row .c b { color: var(--ink); font-weight: var(--w-semi); }
+.comm-row .notes { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; min-width: 0; }
+.note-chip { display: inline-flex; align-items: center; gap: 4px; padding: 0.05rem 0.5rem; border-radius: var(--r-pill); font-size: var(--t-xs); font-weight: var(--w-semi); white-space: nowrap; }
+.note-chip.warn { background: var(--warn-bg); color: var(--warn); }
+.note-chip.info { background: var(--off-bg); color: var(--ink-2); }
+.note-ready { font-size: var(--t-xs); color: var(--ink-3); opacity: 0.7; }
+.comm-row .cnt { display: none; }
+.comm-unfold { padding: 4px 14px 10px; border-top: 1px solid var(--line-soft); background: var(--surface-2); }
+.room-gear { display: flex; flex-wrap: wrap; gap: 6px; padding: 0.5rem 0 0.1rem; }
+.gchip { display: inline-flex; align-items: center; gap: 0.4rem; max-width: 100%; padding: 0.25rem 0.45rem 0.25rem 0.5rem; border-left: 3px solid var(--line); border-radius: var(--r); background: var(--inset); font-size: var(--t-sm); }
+.gchip .chip-id { font-size: var(--t-xs); }
+.comm-caveat, .comm-escape { max-width: 72ch; margin: 10px 2px 0; font-size: var(--t-sm); color: var(--ink-3); }
+.comm-pickzone { position: relative; }
+.commit-copy { margin-top: 6px; padding: 10px 0 0; border-top: 1px solid var(--line-soft); }
+.commit-promise { margin: 0; font-size: var(--t-md); }
+.commit-bar { padding: 8px 0; }
+.bigbtn { display: inline-block; padding: 11px 22px; border: 1px solid var(--accent); border-radius: var(--r-big); background: var(--accent); color: var(--accent-ink); font: inherit; font-size: var(--t-md); font-weight: var(--w-bold); cursor: pointer; }
+.bigbtn:disabled { opacity: 0.5; cursor: default; }
+.commit-after .smallprint { display: block; font-size: var(--t-sm); color: var(--ink-3); }
+
+@media (max-width: 560px) {
+	.comm-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+	.comm-fact { min-width: 0; padding: 7px 8px; }
+	.comm-fact .n { font-size: 20px; }
+	.comm-fact.mode { grid-column: 1 / -1; }
+	.comm-list { flex-direction: column; }
+	.comm-item { width: 100%; min-width: 0; }
+	.comm-cols { display: none; }
+	.comm-row { grid-template-columns: 56px 1fr auto; grid-template-areas: "sw name lx" "sw meta meta"; gap: 1px 8px; padding: 8px 10px; }
+	.comm-row .sw { grid-area: sw; }
+	.comm-row .rn { grid-area: name; }
+	.comm-row .rn code { display: none; }
+	.comm-row .c { display: none; }
+	.comm-row .c.lx { display: block; grid-area: lx; font-size: var(--t-sm); }
+	.comm-row .meta { grid-area: meta; }
+	.comm-row .cnt { display: inline; font-family: var(--font-num); font-size: var(--t-xs); color: var(--ink-3); }
+	.note-ready { display: none; }
+	.commit-bar { position: sticky; bottom: 0; z-index: 20; padding: 8px 0; border-top: 1px solid var(--line-soft); background: var(--bg); }
+	.bigbtn { display: block; width: 100%; text-align: center; }
+}
+
+/* The first-run board's people chips. A name wraps: it is never cut. */
+.comm-sheet .people-row { display: inline-flex; flex-wrap: wrap; gap: 6px; vertical-align: middle; padding: 0; }
+.person-chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border: 1px solid transparent; border-radius: var(--r-pill); background: var(--surface-2); color: var(--ink); font: inherit; font-size: var(--t-sm); max-width: 100%; cursor: pointer; }
+.person-chip-name { font-weight: var(--w-semi); overflow-wrap: anywhere; }
+.person-chip-state { color: var(--ink-3); font-size: var(--t-xs); }
+.person-chip.home .person-chip-state { color: var(--ok); }
+.person-chip.out { opacity: 0.55; background: none; border-color: var(--line); }
+.person-chip.out .person-chip-name { text-decoration: line-through; }
+.person-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--ink-3); background: transparent; }
+.person-dot.home { background: var(--ok); border-color: var(--ok); }
+.person-dot.unknown { border-style: dashed; }
+/* ==== end A. Components only lighting's first design draws ==== */

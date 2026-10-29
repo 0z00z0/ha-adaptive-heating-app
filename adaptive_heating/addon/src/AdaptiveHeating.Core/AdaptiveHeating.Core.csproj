@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<RootNamespace>AdaptiveHeating.Core</RootNamespace>
+		<Description>The settings and engine code copied from Adaptive Lighting's core, with no page and no host, so the page and the add-on both compile against one copy.</Description>
+		<GenerateDocumentationFile>false</GenerateDocumentationFile>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- Copied from Adaptive Lighting. -->
+		<Compile Include="..\FromAdaptiveLighting\AdaptiveLighting.Extensions\**\*.cs" />
+		<Compile Include="..\FromAdaptiveLighting\AdaptiveLighting\**\*.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- The state notes are internal to the copies, as in lighting; the add-on opens them. -->
+		<InternalsVisibleTo Include="AdaptiveHeating.AddOn" />
+		<InternalsVisibleTo Include="AdaptiveHeating.Page.Tests" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- Same number as the add-on pins; the two have to agree. -->
+		<PackageReference Include="NetDaemon.HassModel" Version="26.36.0" />
+
+		<!--
+			The settings document's reader and writer. Pinned at the number AdaptiveLighting pins, because the
+			document's shape is a copy of that one and the two are kept in step by hand.
+		-->
+		<PackageReference Include="YamlDotNet" Version="18.1.0" />
+	</ItemGroup>
+
+</Project>

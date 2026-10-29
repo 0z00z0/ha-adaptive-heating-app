@@ -1,0 +1,241 @@
+@namespace Adaptive.UI
+@using System.Text.Json
+
+@* Fixed stops on a rail, so a value is dragged instead of hunted for in a list. The leftmost stop is not a
+   number: where Inheritable is set it means "state nothing here". It sits in a recessed pocket at the left end
+   of the rail, and psl-home is the graduation mark on the rail where the real scale starts; drag left past the
+   mark and the thumb lands in the pocket. The hollow thumb marks the pocket is where the thumb currently sits.
+
+   A stored value the ladder does not carry gets a position of its own, never the nearest stop. Opening the
+   page has to leave a hand-edited document as it was.
+
+   Rail and readout share one line, the number after the rail: a settings row on a phone is read left to right,
+   and a readout on a line of its own doubles the height of every row on the page.
+
+   The readout tracks the thumb during a drag from plain JS (preset-slider.js), reading data-psl-readouts rather
+   than waiting for the server round trip @onchange commits on release. *@
+
+@* The fill and the pocket are declared here, not on the input: the zero mark is a sibling of the input and
+   inherits nothing from it. *@
+<div class="psl @(OnDefault ? "psl-default" : null) @(Inheritable ? "psl-inheritable" : null)" style="@Fill">
+	<div class="psl-line">
+		@if (Label is { Length: > 0 })
+		{
+			<span class="psl-label">@Label</span>
+		}
+
+		@* The mark rides on the rail, so it needs a box the rail's own width to place itself against. *@
+		<span class="psl-rail">
+			<input class="psl-range" type="range" min="0" max="@Invariant(Max)" step="1" value="@Invariant(_position)"
+				   aria-label="@AriaLabel"
+				   aria-valuetext="@SpokenValue"
+				   data-psl-readouts="@ReadoutsJson"
+				   @onchange="OnMoved" />
+
+			@if (Inheritable)
+			{
+				<span class="psl-home" title="0, and the pocket left of it is @DefaultLabel" aria-hidden="true"></span>
+			}
+		</span>
+
+		<span class="psl-read">
+			@if (Mark is not null)
+			{
+				@Mark
+			}
+
+			@if (Inheritable)
+			{
+				<span class="psl-borrow-group" hidden="@(!OnDefault)">
+					<span class="psl-glyph" aria-hidden="true"></span>
+					<span class="psl-default-text">@DefaultLabel</span>
+					<span class="psl-borrowed">@PlainText</span>
+				</span>
+				<span class="psl-value-group" hidden="@OnDefault">
+					<span class="psl-value @(Mixed is not null ? "psl-mixed" : null)">@(Mixed ?? StepText)</span>
+					@if (_unlisted && Mixed is null)
+					{
+						<span class="psl-custom">custom</span>
+					}
+				</span>
+			}
+			else
+			{
+				<span class="psl-value @(Mixed is not null ? "psl-mixed" : null)">@(Mixed ?? StepText)</span>
+				@if (_unlisted && Mixed is null)
+				{
+					<span class="psl-custom">custom</span>
+				}
+			}
+		</span>
+	</div>
+</div>
+
+@code {
+	/// <summary>The number in force here: this surface's own, or the one it is borrowing.</summary>
+	[Parameter]
+	public double Value { get; set; }
+
+	/// <summary>Whether <see cref="Value"/> is borrowed from above, not stated on this surface.</summary>
+	[Parameter]
+	public bool AtDefault { get; set; }
+
+	/// <summary>The stops to offer, from <see cref="Presets"/>.</summary>
+	[Parameter, EditorRequired]
+	public IReadOnlyList<PresetChoice> Options { get; set; } = [];
+
+	/// <summary>Whether the rail carries a leftmost stop meaning "state nothing here".</summary>
+	/// <remarks><c>false</c> where there is nothing above to borrow from, as on the house's own schedule.</remarks>
+	[Parameter]
+	public bool Inheritable { get; set; }
+
+	/// <summary>What the leftmost stop is called, e.g. <c>the schedule's</c>.</summary>
+	[Parameter]
+	public string DefaultLabel { get; set; } = "the house default";
+
+	/// <summary>Unit written after a bare number, e.g. <c>°C</c>.</summary>
+	[Parameter]
+	public string? Unit { get; set; }
+
+	/// <summary>Whether the readout carries each stop's own wording, or only its number.</summary>
+	[Parameter]
+	public bool ShowStepWording { get; set; }
+
+	/// <summary>Shown beside the control on a narrow screen, where the table's heading row is gone.</summary>
+	[Parameter]
+	public string? Label { get; set; }
+
+	/// <summary>Names the control for a screen reader, which has no heading row to read.</summary>
+	[Parameter]
+	public string AriaLabel { get; set; } = "";
+
+	/// <summary>Drawn at the start of the readout: a temperature swatch, an own-setting dot.</summary>
+	[Parameter]
+	public RenderFragment? Mark { get; set; }
+
+	/// <summary>Shown in place of the number where the surface holds several values, e.g. <c>mixed</c>.</summary>
+	[Parameter]
+	public string? Mixed { get; set; }
+
+	/// <summary><c>null</c> asks to go back to the default; a number states one here.</summary>
+	[Parameter]
+	public EventCallback<double?> ValueChanged { get; set; }
+
+	private List<double> _steps = [];
+	private int _position;
+	private bool _unlisted;
+	private List<Readout> _readouts = [];
+
+	// Worked out once per parameter change, not per read: Max, the fill fraction and the readout all want it,
+	// on a page that re-renders at 1 Hz.
+	protected override void OnParametersSet()
+	{
+		_steps = [.. Options.Select(option => option.Value)];
+
+		double shown = Shown;
+		int found = _steps.FindIndex(step => Matches(step, shown));
+
+		_unlisted = !OnDefault && found < 0;
+
+		if (_unlisted)
+		{
+			_steps.Add(shown);
+			_steps.Sort();
+			found = _steps.FindIndex(step => Matches(step, shown));
+		}
+
+		_position = OnDefault ? 0 : Math.Max(found, 0) + Offset;
+
+		BuildReadouts();
+	}
+
+	private bool OnDefault => Inheritable && AtDefault;
+
+	// A temperature keeps its half degree, so the value is shown as it is held.
+	private double Shown => Value;
+
+	private int Offset => Inheritable ? 1 : 0;
+
+	private int Max => Math.Max(_steps.Count - 1 + Offset, 0);
+
+	/// <summary>The stop's own wording where the surface asks for it, and the bare number otherwise.</summary>
+	private string StepText =>
+		ShowStepWording && Options.FirstOrDefault(option => Matches(option.Value, Shown)) is { } named
+			? named.Label
+			: PlainText;
+
+	private string PlainText => Format(Shown);
+
+	private string SpokenValue => Mixed ?? (OnDefault ? $"{DefaultLabel}, {PlainText}" : StepText);
+
+	// Read by a person, so in the page's culture; the attributes above stay invariant.
+	private string Format(double value)
+	{
+		string number = value.ToString("0.#", CultureInfo.CurrentCulture);
+
+		return Unit is { Length: > 0 } unit ? $"{number} {unit}" : number;
+	}
+
+	private string Describe(double stepValue) =>
+		ShowStepWording && Options.FirstOrDefault(option => Matches(option.Value, stepValue)) is { } named
+			? named.Label
+			: Format(stepValue);
+
+	// Bare fractions of the ladder, not lengths: a native thumb's centre travels inset by half its own width, so
+	// the stylesheet converts both through that inset once. A decimal comma in a style attribute would not parse
+	// at all, so both go out invariant.
+	private string Fill
+	{
+		get
+		{
+			string fill = $"--psl-fill: {Fraction(Max > 0 ? _position / (double)Max : 0)}";
+
+			return Inheritable && Max > 0
+				? $"{fill}; --psl-pocket: {Fraction(Offset / (double)Max)}"
+				: fill;
+		}
+	}
+
+	private static string Invariant(double value) => InvariantNumber.Format(value, 2);
+
+	// Five decimals, not two: at seventeen stops a fraction rounded to 0.06 moves the zero mark a pixel off the
+	// seam on a wide rail, which is the one thing this number exists to get right.
+	private static string Fraction(double value) => InvariantNumber.Format(value, 5);
+
+	private static bool Matches(double left, double right) => Math.Abs(left - right) < 0.001;
+
+	/// <summary>One entry per slider position, so the client can show the right words while dragging without
+	/// asking the server what a position means.</summary>
+	private readonly record struct Readout(string Text, bool IsDefault, bool Custom);
+
+	private void BuildReadouts()
+	{
+		List<Readout> readouts = new(Max + 1);
+
+		if (Inheritable)
+			readouts.Add(new Readout(PlainText, true, false));
+
+		for (int index = 0; index < _steps.Count; index++)
+			readouts.Add(new Readout(Describe(_steps[index]), false, _unlisted && index == _position - Offset));
+
+		_readouts = readouts;
+	}
+
+	private string ReadoutsJson => JsonSerializer.Serialize(
+		_readouts.Select(readout => new { t = readout.Text, d = readout.IsDefault, c = readout.Custom }));
+
+	private Task OnMoved(ChangeEventArgs args)
+	{
+		if (!int.TryParse(args.Value as string, NumberStyles.Integer, CultureInfo.InvariantCulture, out int picked))
+			return Task.CompletedTask;
+
+		if (Inheritable && picked == 0)
+			return ValueChanged.InvokeAsync(null);
+
+		int index = picked - Offset;
+
+		return index >= 0 && index < _steps.Count
+			? ValueChanged.InvokeAsync(_steps[index])
+			: Task.CompletedTask;
+	}
+}

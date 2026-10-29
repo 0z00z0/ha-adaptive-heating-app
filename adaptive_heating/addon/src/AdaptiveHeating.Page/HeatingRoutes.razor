@@ -1,0 +1,15 @@
+@inject IStringLocalizer<AdaptiveHeating.Page.Resources.PageStrings> Words
+
+@* Pages from this library only. The add-on and the render host serve the same set. *@
+<Router AppAssembly="@typeof(HeatingRoutes).Assembly">
+	<Found Context="routeData">
+		<RouteView RouteData="@routeData" DefaultLayout="@typeof(HeatingLayout)" />
+		<FocusOnNavigate RouteData="@routeData" Selector="h1" />
+	</Found>
+	<NotFound>
+		<LayoutView Layout="@typeof(HeatingLayout)">
+			<h1 class="pagetitle">@Words["NotFound"]</h1>
+			<p class="lede">@Words["NotFoundBody"]</p>
+		</LayoutView>
+	</NotFound>
+</Router>

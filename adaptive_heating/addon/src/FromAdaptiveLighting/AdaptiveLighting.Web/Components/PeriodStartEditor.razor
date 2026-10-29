@@ -1,0 +1,200 @@
+@namespace Adaptive.UI
+@using Adaptive.Settings
+@* Composing lives in PeriodStartText, so every shape emits a string the engine accepts; the note underneath
+   is produced by parsing what is stored. *@
+@inject HaCatalog Catalog
+@inject TheHouseholdClock Household
+
+<div class="start-editor">
+	<select class="cell start-mode" @bind:get="_mode" @bind:set="OnModeChanged">
+		<option value="clock">at a clock time</option>
+		<option value="sun">relative to the sun</option>
+	</select>
+
+	@* Clock is the else, so a Start neither shape describes still renders a control and a way forward. *@
+	@if (_mode == "sun")
+	{
+		<input class="cell num start-minutes" type="number" min="0" max="720" step="5" value="@_minutes" @onchange="OnMinutesChanged" />
+		<select class="cell start-direction" @bind:get="_direction" @bind:set="OnDirectionChanged">
+			<option value="before">min before</option>
+			<option value="after">min after</option>
+		</select>
+		<select class="cell start-anchor" @bind:get="_anchor" @bind:set="OnAnchorChanged">
+			<option value="sunrise">sunrise</option>
+			<option value="sunset">sunset</option>
+		</select>
+	}
+	else
+	{
+		<input class="cell start-time" type="time" value="@_time" @onchange="OnTimeChanged" />
+	}
+
+	@* A clock start needs no note; a sun anchor does, because the time it lands on today is not on screen
+	   anywhere else. *@
+	@if (Description is null || _mode != "clock")
+	{
+		<div class="cell-note @(Description is null ? "bad" : "")">
+			@if (Description is { } description)
+			{
+				@description
+				@if (TodaySuffix is { Length: > 0 } suffix)
+				{
+					<span class="start-today"> @suffix</span>
+				}
+			}
+			else
+			{
+				@UnreadableNote
+			}
+		</div>
+	}
+</div>
+
+@code {
+	/// <summary>The stored Start string, as the YAML carries it.</summary>
+	[Parameter]
+	public string Value { get; set; } = "";
+
+	[Parameter]
+	public EventCallback<string> ValueChanged { get; set; }
+
+	private string _mode = "clock";
+	private string _time = "12:00";
+	private string _anchor = "sunrise";
+	private string _direction = "after";
+	private int _minutes;
+
+	// The last string this control emitted or was initialised from. Re-initialising the sub-controls on every
+	// render would fight the person using them, so it happens only when the value changed underneath.
+	private string? _seen;
+
+	private string? Description => PeriodStartText.Describe(Value);
+
+	// The control below cannot express a Start the engine will refuse, so the string itself is quoted here.
+	// Nothing writes back until a control is changed, so it survives the render.
+	private string UnreadableNote =>
+		string.IsNullOrWhiteSpace(Value)
+			? "No start yet — pick a time"
+			: $"'{Value}' is refused — pick a time";
+
+	/// <summary>For a sun-anchored start, the wall-clock time it resolves to; it says "next" because
+	/// <c>SunTimesToday</c> reads sun.sun's next rising or setting, often tomorrow.</summary>
+	private string? TodaySuffix
+	{
+		get
+		{
+			if (!PeriodStart.TryParse(Value, out PeriodStart? parsed) || parsed is not { SunEvent: not SunEvent.None })
+				return null;
+
+			(TimeOnly? sunrise, TimeOnly? sunset) = Catalog.SunTimesToday(Household.Zone);
+			return parsed.Resolve(new SunTimes(sunrise, sunset)) is { } time
+				? $"→ next {time:HH\\:mm}"
+				: null;
+		}
+	}
+
+	/// <inheritdoc/>
+	protected override void OnParametersSet()
+	{
+		if (string.Equals(Value, _seen, StringComparison.Ordinal))
+			return;
+
+		_seen = Value;
+
+		if (!PeriodStart.TryParse(Value, out PeriodStart? parsed) || parsed is null)
+		{
+			// Unparseable, including a fresh empty row. _time keeps its own value: only a changed control writes
+			// back, so the stored string is left alone.
+			_mode = "clock";
+			return;
+		}
+
+		if (parsed.FixedTime is { } time)
+		{
+			_mode = "clock";
+			_time = PeriodStartText.Clock(time);
+			return;
+		}
+
+		_mode = "sun";
+		_anchor = parsed.SunEvent == SunEvent.Sunset ? "sunset" : "sunrise";
+		_direction = parsed.Offset < TimeSpan.Zero ? "before" : "after";
+		_minutes = (int)Math.Abs(parsed.Offset.TotalMinutes);
+	}
+
+	private Task OnModeChanged(string mode)
+	{
+		_mode = mode;
+
+		// Commit sets _seen = Value, which short-circuits OnParametersSet, so the sub-control fields can still
+		// describe whatever was last shown. Re-parse before recomposing from them.
+		SyncControlsFromValue();
+
+		return mode == "sun" ? EmitSun() : EmitClock();
+	}
+
+	/// <summary>Refreshes the sub-control fields from the current <see cref="Value"/>, without touching <c>_mode</c>.</summary>
+	private void SyncControlsFromValue()
+	{
+		if (!PeriodStart.TryParse(Value, out PeriodStart? parsed) || parsed is null)
+			return;
+
+		if (parsed.FixedTime is { } time)
+		{
+			_time = PeriodStartText.Clock(time);
+			return;
+		}
+
+		_anchor = parsed.SunEvent == SunEvent.Sunset ? "sunset" : "sunrise";
+		_direction = parsed.Offset < TimeSpan.Zero ? "before" : "after";
+		_minutes = (int)Math.Abs(parsed.Offset.TotalMinutes);
+	}
+
+	private Task OnTimeChanged(ChangeEventArgs args)
+	{
+		if (args.Value is string { Length: > 0 } text)
+			_time = text;
+
+		return EmitClock();
+	}
+
+	private Task OnMinutesChanged(ChangeEventArgs args)
+	{
+		if (int.TryParse(args.Value as string, NumberStyles.Integer, CultureInfo.InvariantCulture, out int minutes))
+			_minutes = Math.Clamp(Math.Abs(minutes), 0, 720);
+
+		return EmitSun();
+	}
+
+	private Task OnDirectionChanged(string direction)
+	{
+		_direction = direction;
+		return EmitSun();
+	}
+
+	private Task OnAnchorChanged(string anchor)
+	{
+		_anchor = anchor;
+		return EmitSun();
+	}
+
+	private Task EmitClock() =>
+		Commit(TimeOnly.TryParseExact(_time, ["HH:mm", "H:mm", "HH:mm:ss"], CultureInfo.InvariantCulture, DateTimeStyles.None, out TimeOnly time)
+			? PeriodStartText.Clock(time)
+			: Value);
+
+	private Task EmitSun()
+	{
+		SunEvent anchor = _anchor == "sunset" ? SunEvent.Sunset : SunEvent.Sunrise;
+		int signed = _direction == "before" ? -_minutes : _minutes;
+
+		return Commit(PeriodStartText.Sun(anchor, signed));
+	}
+
+	private Task Commit(string value)
+	{
+		Value = value;
+		_seen = value;
+		return ValueChanged.InvokeAsync(value);
+	}
+}

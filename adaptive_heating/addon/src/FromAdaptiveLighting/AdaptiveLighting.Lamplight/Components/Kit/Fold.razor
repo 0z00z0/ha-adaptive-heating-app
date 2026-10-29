@@ -1,0 +1,73 @@
+@* Controlled, not self-managed like the first design's GroupFold: SectionIndex has to be able to force one
+   open from outside, so Open/OpenChanged is the whole state. The fold-sum stays in the markup even while open
+   — the draft's own CSS hides it, so no branch is needed here. *@
+
+<section class="@CssClass" id="@Id">
+	<button type="button" class="fold-head" aria-expanded="@(Open ? "true" : "false")" @onclick="Toggle">
+		<span class="fold-title">@Title</span>
+
+		@if (BangKind is { Length: > 0 } bangKind)
+		{
+			<Bang Kind="@bangKind" Title="@(BangTitle ?? "")" />
+		}
+
+		@if (Count is { } count)
+		{
+			<span class="fold-count" title="@CountTitle">@count</span>
+		}
+
+		<span class="fold-end">
+			<span class="fold-sum">@Summary</span>
+			<span class="chev" aria-hidden="true"></span>
+		</span>
+	</button>
+
+	<div class="fold-body" hidden="@(!Open)">
+		@ChildContent
+	</div>
+</section>
+
+@code {
+	/// <summary>Also the anchor id, so a link elsewhere on the page can reach this fold without script.</summary>
+	[Parameter, EditorRequired]
+	public string Id { get; set; } = "";
+
+	[Parameter, EditorRequired]
+	public string Title { get; set; } = "";
+
+	/// <summary>Shown collapsed; a fold with nothing worth summarising leaves this null.</summary>
+	[Parameter]
+	public string? Summary { get; set; }
+
+	[Parameter]
+	public int? Count { get; set; }
+
+	[Parameter]
+	public string? CountTitle { get; set; }
+
+	/// <summary>"warn" or "bad", or null for none.</summary>
+	[Parameter]
+	public string? BangKind { get; set; }
+
+	[Parameter]
+	public string? BangTitle { get; set; }
+
+	/// <summary>An extra class, e.g. the room page's phone-only "Right now" fold.</summary>
+	[Parameter]
+	public string? Class { get; set; }
+
+	[Parameter]
+	public bool Open { get; set; }
+
+	[Parameter]
+	public EventCallback<bool> OpenChanged { get; set; }
+
+	[Parameter, EditorRequired]
+	public RenderFragment? ChildContent { get; set; }
+
+	private Task Toggle() => OpenChanged.InvokeAsync(!Open);
+
+	// A single expression: Razor's attribute-value parser mishandles adjacent @(...) blocks with no
+	// literal text between them.
+	private string CssClass => $"fold{(Open ? " open" : "")}{(Class is { Length: > 0 } extra ? $" {extra}" : "")}";
+}

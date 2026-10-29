@@ -1,0 +1,39 @@
+@using AdaptiveLighting.Lamplight.Components.Kit
+
+@if (Model.KillSwitchActive)
+{
+	<div class="notice bad">
+		<span class="info-line">
+			<strong>Adaptive Heating is paused</strong>
+			<Info Label="Paused" Severity="InfoSeverity.Bad">
+				Nothing was switched off, but no thermostat will change until it is switched back on.
+			</Info>
+		</span>
+	</div>
+}
+@if (!Model.EngineIsRunning)
+{
+	<div class="notice bad">
+		<span class="info-line">
+			<strong>Adaptive Heating has stopped</strong>
+			@if (Model.EngineFault is { Length: > 0 } fault)
+			{
+				<Info Label="Stopped" Severity="InfoSeverity.Bad">@fault</Info>
+			}
+		</span>
+	</div>
+}
+@if (!Model.HasData)
+{
+	<div class="notice">
+		<span class="info-line">
+			<strong>Starting up&hellip;</strong>
+			<Info Label="Starting up">Waiting for the first report from the rooms. This normally takes a few seconds.</Info>
+		</span>
+	</div>
+}
+
+@code {
+	[Parameter, EditorRequired]
+	public DashboardPageModel Model { get; set; } = default!;
+}

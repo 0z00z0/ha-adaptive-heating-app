@@ -1,0 +1,47 @@
+@* The room and house page hero. LampStyle comes from LampPaint.Style; the lamp-glow class is added only when
+   it is non-null, because the shared gradient reads --lampc with no fallback and a room that is off must not
+   ask CSS to resolve a custom property nothing set. *@
+
+<section class="@CssClass" style="@LampStyle">
+	<div class="lc-top">
+		<h1>@Name</h1>
+		<span class="big"><b>@Big</b><span>@BigSub</span></span>
+		@StateChip
+	</div>
+	<div class="lc-pairs">
+		@ChildContent
+	</div>
+</section>
+
+@code {
+	[Parameter, EditorRequired]
+	public string Name { get; set; } = "";
+
+	/// <summary>The "--lampc:…;--lvl:…" string from LampPaint.Style, or null for a room that is off.</summary>
+	[Parameter]
+	public string? LampStyle { get; set; }
+
+	/// <summary>An extra class for a state this component draws no opinion about, such as an off room's look.</summary>
+	[Parameter]
+	public string? Class { get; set; }
+
+	[Parameter, EditorRequired]
+	public string Big { get; set; } = "";
+
+	[Parameter, EditorRequired]
+	public string BigSub { get; set; } = "";
+
+	/// <summary>The small state chip beside the big value, e.g. a Chip component. Named to avoid colliding
+	/// with the Chip component's own tag when both are used inside a LampCard.</summary>
+	[Parameter]
+	public RenderFragment? StateChip { get; set; }
+
+	/// <summary>The pairs shown below, e.g. one or more Pair components.</summary>
+	[Parameter, EditorRequired]
+	public RenderFragment? ChildContent { get; set; }
+
+	// A single expression: Razor's attribute-value parser mishandles adjacent @(...) blocks with no
+	// literal text between them.
+	private string CssClass =>
+		$"lampcard{(LampStyle is { Length: > 0 } ? " lamp-glow" : "")}{(Class is { Length: > 0 } extra ? $" {extra}" : "")}";
+}

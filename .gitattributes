@@ -1,0 +1,18 @@
+* text=auto
+
+*.cs text eol=crlf
+*.razor text eol=crlf
+*.resx text eol=crlf
+*.csproj text eol=crlf
+*.slnx text eol=crlf
+*.props text eol=crlf
+
+# The integration runs on Linux inside Home Assistant. A CRLF shebang is not executable there.
+*.py text eol=lf
+*.sh text eol=lf
+*.json text eol=lf
+*.toml text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+Dockerfile text eol=lf
+Dockerfile.dockerignore text eol=lf

@@ -1,0 +1,49 @@
+@using System.Globalization
+@using AdaptiveLighting.Lamplight.Components.Kit
+
+<section class="glass" aria-label="Worth knowing">
+	<h2 class="sec-h">Worth knowing</h2>
+
+	@if (Model.LogRows.Count > 0)
+	{
+		<ol class="log">
+			@foreach (ActivityRow row in Model.LogRows)
+			{
+				<li @key="row.Sequence">
+					<time datetime="@row.At.ToString("o", CultureInfo.InvariantCulture)">@BoardView.Clock(row.At)</time>
+					<span>
+						@if (row.IsAboutTheHouse)
+						{
+							<b>House</b>
+						}
+						else if (HouseView.RoomHref(row.RoomId) is { } href)
+						{
+							<a href="@href"><b>@row.Room</b></a>
+						}
+						else
+						{
+							<b>@row.Room</b>
+						}
+						&middot; @row.Line.What
+						@if (row.Line.More is { Length: > 0 } more)
+						{
+							<Info Label="@row.Line.What">@more</Info>
+						}
+					</span>
+					@if (row.Line.Why is { Length: > 0 } why)
+					{
+						<span class="why">@why</span>
+					}
+				</li>
+			}
+		</ol>
+	}
+
+	<p class="d2-foot">@Model.LogFoot</p>
+	<a class="morelink" href="activity">All activity &rsaquo;</a>
+</section>
+
+@code {
+	[Parameter, EditorRequired]
+	public DashboardPageModel Model { get; set; } = default!;
+}

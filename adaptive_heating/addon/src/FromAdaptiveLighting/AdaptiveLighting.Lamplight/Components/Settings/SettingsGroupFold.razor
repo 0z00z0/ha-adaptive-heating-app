@@ -1,0 +1,86 @@
+@namespace Adaptive.UI
+@* The defaults every room starts with, drawn with the kit's Fold and Row. A house row is never "own" — there is
+   nothing above the house to inherit from, so no revert is wired. *@
+@using AdaptiveLighting.Configuration
+@using AdaptiveLighting.Lamplight.Components.Kit
+@using AdaptiveLighting.Web.Components
+
+<Fold Id="@Id" Title="Every room starts with" Summary="@($"{Model.DefaultHoldMinutes} min hold")" Open="@Open" OpenChanged="@OpenChanged">
+	<div class="rows">
+		<Row Label="Hold a change at the thermostat for" Value="@($"{Model.DefaultHoldMinutes} min")" IsEditing="@(_editing == "hold")" OnToggleEdit="@(() => ToggleEdit("hold"))">
+			<Help>After this long the mode's temperature takes the room back. A room can set its own.</Help>
+			<ChildContent>
+				<Stepper Value="@Model.DefaultHoldMinutes"
+						 Text="@($"{Model.DefaultHoldMinutes} min")"
+						 Label="Hold a change at the thermostat for"
+						 Step="15"
+						 Min="15"
+						 Max="1440"
+						 ValueChanged="@(value => Model.DefaultHoldMinutes = (int)value)" />
+			</ChildContent>
+		</Row>
+
+		<Row Label="Lowest night temperature" Value="@Degrees(Model.DefaultLowestNightTemperature)" IsEditing="@(_editing == "lowest-night")" OnToggleEdit="@(() => ToggleEdit("lowest-night"))">
+			<Help>A night setback never lowers a room below this. A room can set its own.</Help>
+			<ChildContent>
+				<Stepper Value="@Model.DefaultLowestNightTemperature"
+						 Text="@Degrees(Model.DefaultLowestNightTemperature)"
+						 Label="Lowest night temperature"
+						 Step="0.5"
+						 Min="-20"
+						 Max="30"
+						 ValueChanged="@(value => Model.DefaultLowestNightTemperature = value)" />
+			</ChildContent>
+		</Row>
+
+		<Row Label="Frost temperature" Value="@(Model.DefaultFrostProtection ? Degrees(Model.DefaultFrostTemperature) : "No limit")" IsEditing="@(_editing == "frost")" OnToggleEdit="@(() => ToggleEdit("frost"))">
+			<Help>A night setback never lowers a room below this. With no limit, only the lowest night temperature holds it. A room can set its own.</Help>
+			<ChildContent>
+				@if (Model.DefaultFrostProtection)
+				{
+					<Stepper Value="@Model.DefaultFrostTemperature"
+							 Text="@Degrees(Model.DefaultFrostTemperature)"
+							 Label="Frost temperature"
+							 Step="0.5"
+							 Min="-20"
+							 Max="30"
+							 ValueChanged="@(value => Model.DefaultFrostTemperature = value)" />
+				}
+				<label class="checks">
+					<input type="checkbox" checked="@(!Model.DefaultFrostProtection)" @onchange="@(args => Model.DefaultFrostProtection = args.Value is not true)" />
+					No limit
+				</label>
+			</ChildContent>
+		</Row>
+
+		<Row Label="A new room runs" Value="@(Model.DefaultEnabled ? "Yes" : "No")" IsEditing="@(_editing == "enabled")" OnToggleEdit="@(() => ToggleEdit("enabled"))">
+			<Help>Whether a room runs before its own switch is set. A room's own switch wins.</Help>
+			<ChildContent>
+				<button type="button" class="toggle @(Model.DefaultEnabled ? "on" : null)" role="switch" aria-checked="@(Model.DefaultEnabled ? "true" : "false")" aria-label="A new room runs" @onclick="() => Model.DefaultEnabled = !Model.DefaultEnabled">
+					<span class="knob"></span>
+				</button>
+			</ChildContent>
+		</Row>
+	</div>
+</Fold>
+
+@code {
+	[Parameter, EditorRequired]
+	public string Id { get; set; } = "";
+
+	[Parameter, EditorRequired]
+	public HousePageModel Model { get; set; } = null!;
+
+	[Parameter]
+	public bool Open { get; set; }
+
+	[Parameter]
+	public EventCallback<bool> OpenChanged { get; set; }
+
+	// Only one row in the group is open at a time, tracked here rather than on the model: it is display state.
+	private string? _editing;
+
+	private void ToggleEdit(string key) => _editing = _editing == key ? null : key;
+
+	private static string Degrees(double value) => $"{value.ToString("0.#", System.Globalization.CultureInfo.CurrentCulture)} °C";
+}

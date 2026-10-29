@@ -1,0 +1,311 @@
+@namespace Adaptive.UI
+@inject HaCatalog Catalog
+@inject TheHouseholdClock Household
+
+<div class="periods">
+	@* Said once for the table as a whole: without it the Start fields below look like Start fields that work. *@
+	@if (StartsAreDead)
+	{
+		<p class="notice period-authority info-host">
+			<span class="info-line">
+				Start times not in force
+				<InfoPopover Label="Start times" Severity="InfoSeverity.Warn">
+					Home Assistant decides when periods change. A period runs for as long as its dropdown names it.
+					The start times are kept, and take over again the moment the time of day is handed back to
+					adaptive heating.
+				</InfoPopover>
+			</span>
+		</p>
+	}
+
+	@for (int index = 0; index < Periods.Count; index++)
+	{
+		TimePeriodConfig period = Periods[index];
+		int position = index;
+
+		<details class="panel period-fold @(ReferenceEquals(period, _inForce.Period) ? "active" : "")" @key="period">
+			@* The move/remove controls need stopPropagation, or a tap on them also toggles the fold. *@
+			<summary class="period-summary">
+				<span class="period-title">@DisplayName(period)</span>
+				@if (ReferenceEquals(period, _inForce.Period))
+				{
+					<span class="badge active-now" title="@ActiveNowTitle">active now</span>
+				}
+				<span class="period-summary-start">@StartText(period)</span>
+				<span class="period-summary-hint">@LevelSummary(period)</span>
+
+				<span class="period-actions">
+					<button type="button" title="Move earlier" disabled="@(position == 0)"
+							@onclick="() => Move(position, -1)" @onclick:stopPropagation="true">&uarr;</button>
+					<button type="button" title="Move later" disabled="@(position == Periods.Count - 1)"
+							@onclick="() => Move(position, 1)" @onclick:stopPropagation="true">&darr;</button>
+					<button type="button" class="danger" title="Remove this period" aria-label="Remove this period"
+							@onclick="() => Remove(position)" @onclick:stopPropagation="true">&times;</button>
+				</span>
+
+				<span class="area-chevron" aria-hidden="true"></span>
+			</summary>
+
+			<div class="field">
+				<div class="field-head">
+					<span class="field-label">
+						<label for="@($"period-name-{position}")">Period name</label>
+						<InfoPopover Label="Period name">Shown on the dashboard. Rename it at any time &mdash; nothing points at the name.</InfoPopover>
+					</span>
+				</div>
+				<div class="field-control">
+					<input type="text" id="@($"period-name-{position}")" class="cell wide" @bind="period.Name" @bind:event="oninput" placeholder="evening" />
+				</div>
+			</div>
+
+			<div class="period-grid">
+				<div class="pfield">
+					<span class="pfield-label">
+						Starts
+						<InfoPopover Label="Starts">
+							When this period takes over — a clock time, or a moment tied to sunrise/sunset that moves
+							with the seasons. It runs until the next period starts.
+						</InfoPopover>
+					</span>
+					<PeriodStartEditor Value="@period.Start" ValueChanged="@(value => SetStart(period, value))" />
+				</div>
+
+				@if (HasHouseMode)
+				{
+					TimePeriodConfig boundPeriod = period;
+					<div class="pfield">
+						<span class="pfield-label">
+							Also switches house mode to
+							<InfoPopover Label="Also switches house mode to">
+								When this period begins, the house mode is switched too — typically the night period
+								switching to Sleep. Leave unset for a period that only changes the temperature.
+							</InfoPopover>
+						</span>
+						<select class="cell wide" @bind:get="ModeKeyOf(boundPeriod)" @bind:set="@(value => SetMode(boundPeriod, value))">
+							<option value="">(none — leave the house mode unchanged)</option>
+							@foreach (string mode in HouseModeOptions)
+							{
+								<option value="@ModeKeyFor(mode)">@mode</option>
+							}
+							@if (ModeKeyOf(boundPeriod) is { Length: > 0 } stale && !HouseModeOptions.Any(m => string.Equals(ModeKeyFor(m), stale, StringComparison.OrdinalIgnoreCase)))
+							{
+								<option value="@stale">@stale — no such option</option>
+							}
+						</select>
+						<div class="pfield-help">@ModeHelp(boundPeriod)</div>
+					</div>
+				}
+
+				<div class="pfield">
+					<span class="pfield-label">
+						Temperature
+						<InfoPopover Label="Temperature">
+							How warm every room is during this period, unless a room says otherwise on its own page.
+						</InfoPopover>
+					</span>
+
+					@* Inheritable is off here on purpose: this IS the house's answer, so there is nothing above it
+					   to borrow, and a leftmost stop meaning "borrow" would point at nothing. *@
+					<PresetSlider Value="@(period.Temperature ?? Presets.TemperatureCelsius[0].Value)"
+								  ValueChanged="@(value => Set(() => period.Temperature = value ?? period.Temperature))"
+								  Options="@Presets.TemperatureCelsius"
+								  Mixed="@(period.Temperature is null ? "not set" : null)"
+								  AriaLabel="Temperature for this period"
+								  Unit="°C">
+						<Mark>
+							@if (period.Temperature is { } celsius)
+							{
+								<span class="lvl-swatch" style="@Swatch(celsius)" aria-hidden="true"></span>
+							}
+						</Mark>
+					</PresetSlider>
+				</div>
+
+			</div>
+		</details>
+	}
+
+	@if (Periods.Count == 0)
+	{
+		<div class="empty">No periods yet</div>
+	}
+
+	<div class="panel-actions">
+		<button type="button" @onclick="Add">Add a period</button>
+		@if (!StartsAreDead)
+		{
+			<span class="info-host">
+				<InfoPopover Label="Periods">Each period runs until the next one starts. Sun-tied starts move with the seasons, so the running order can differ from the list order.</InfoPopover>
+			</span>
+		}
+	</div>
+
+</div>
+
+@code {
+	/// <summary>The document's period list, edited in place.</summary>
+	[Parameter, EditorRequired]
+	public List<TimePeriodConfig> Periods { get; set; } = [];
+
+	/// <summary>Raised after any change, so the page can re-validate.</summary>
+	[Parameter]
+	public EventCallback Changed { get; set; }
+
+	/// <summary>The house-mode option values a period may belong to, live and configured; empty hides the
+	/// House-mode field.</summary>
+	[Parameter]
+	public IReadOnlyList<string> HouseModeOptions { get; set; } = [];
+
+	/// <summary>The house-mode config. <c>null</c> hides the field.</summary>
+	[Parameter]
+	public HouseModeConfig? HouseMode { get; set; }
+
+	/// <summary>The house settings, for who owns the time of day. <c>null</c> reads as this house's own schedule.</summary>
+	[Parameter]
+	public GlobalConfig? Global { get; set; }
+
+	private bool HasHouseMode => HouseMode?.Entity is { Length: > 0 };
+
+	// Under Home Assistant's period authority the Start fields decide nothing: the engine takes the period from
+	// the dropdown and never places one by the clock.
+	private bool StartsAreDead => Global is not null && Schedule.HomeAssistantDecides(Global);
+
+	/// <summary>What the "active now" badge promises, which differs in each of three cases.</summary>
+	// Under Home Assistant's authority with the dropdown on an option no row maps, the engine falls back to the
+	// clock, so the badge must not claim the dropdown named this period.
+	private string ActiveNowTitle => (StartsAreDead, _inForce.Rule) switch
+	{
+		(_, PeriodInForceRule.Select) => "Home Assistant's dropdown is naming this period right now.",
+		(true, _) => "The dropdown names no period this schedule has, so this one is in force from its start time.",
+		_ => "This period is in force right now."
+	};
+
+	/// <summary>The period in force right now and which rule decided it, so its card carries the "active now" badge.</summary>
+	private PeriodInForce _inForce = PeriodInForce.None;
+
+	/// <inheritdoc/>
+	protected override void OnParametersSet() => _inForce = ResolveInForce();
+
+	/// <summary>The period in force right now, by the same rule the engine uses.</summary>
+	/// <remarks>Asked of <see cref="Periods"/>, the draft the editor holds and not what the engine is running,
+	/// so the badge follows an unsaved edit.</remarks>
+	private PeriodInForce ResolveInForce()
+	{
+		(TimeOnly? sunrise, TimeOnly? sunset) = Catalog.SunTimesToday(Household.Zone);
+		SunTimes sun = new(sunrise, sunset);
+		GlobalConfig global = Global ?? new GlobalConfig();
+		string? value = Global is null ? null : Catalog.CurrentStateOf(Global.PeriodSelect?.EntityId);
+
+		return Schedule.InForceNow(Periods, global, sun, DateTimeOffset.Now, value, Household.Zone);
+	}
+
+	private static string DisplayName(TimePeriodConfig period) =>
+		period.Name is { Length: > 0 } name ? name : "unnamed period";
+
+	/// <summary>The start as the header shows it: the raw string, plus the wall-clock time a sun-anchored start
+	/// resolves to today.</summary>
+	private string StartText(TimePeriodConfig period)
+	{
+		if (string.IsNullOrWhiteSpace(period.Start))
+			return "start not set";
+
+		if (!PeriodStart.TryParse(period.Start, out PeriodStart? parsed) || parsed is null)
+			return period.Start;
+
+		if (parsed is not { SunEvent: not SunEvent.None })
+			return period.Start;
+
+		(TimeOnly? sunrise, TimeOnly? sunset) = Catalog.SunTimesToday(Household.Zone);
+		return parsed.Resolve(new SunTimes(sunrise, sunset)) is { } time
+			? $"{period.Start} → {time:HH\\:mm}"
+			: period.Start;
+	}
+
+	private static string LevelSummary(TimePeriodConfig period) =>
+		period.Temperature is { } celsius ? $"{celsius.ToString("0.#", CultureInfo.CurrentCulture)} °C" : "not set";
+
+	// TemperatureColour.Css writes its own invariant integers, so no decimal comma reaches the colour function.
+	private static string Swatch(double celsius) => $"--lvl-temp: {TemperatureColour.Css(celsius)}";
+
+	/// <summary>The option key a period's mode switch is stored as, or empty.</summary>
+	// A live option nobody has classified has no row and so no id; its own value is then the key, which is what
+	// HouseModeConfig.OptionValueFor writes back to the select.
+	private string ModeKeyOf(TimePeriodConfig period) => period.SetsModeId?.Trim() ?? string.Empty;
+
+	private string ModeKeyFor(string optionValue) =>
+		HouseMode?.OptionFor(optionValue)?.Key ?? optionValue.Trim();
+
+	private string ModeHelp(TimePeriodConfig period)
+	{
+		if (period.SetsModeId is not { Length: > 0 } key)
+			return "Mode unchanged";
+
+		return $"Switches to '{HouseMode?.OptionValueFor(key) ?? key.Trim()}'";
+	}
+
+	private Task Set(Action mutate)
+	{
+		mutate();
+		return Changed.InvokeAsync();
+	}
+
+	private Task SetStart(TimePeriodConfig period, string value) => Set(() => period.Start = value);
+
+	private Task SetMode(TimePeriodConfig period, string? key) =>
+		Set(() => period.SetsModeId = string.IsNullOrWhiteSpace(key) ? null : key.Trim());
+
+	/// <summary>What a period starts as, in the one place that decides it.</summary>
+	// The id is minted here and never left to the save-time migration: a room temperature set before the first
+	// save would be written against a period with no id and orphan itself the moment one is assigned. The name is
+	// numbered apart, because three rows called "new period" all at 12:00 is an unreadable table.
+	public static TimePeriodConfig NewPeriod(IReadOnlyList<TimePeriodConfig>? existing = null)
+	{
+		const string Stem = "new period";
+
+		string name = Stem;
+		HashSet<string> takenIds = new(StringComparer.OrdinalIgnoreCase);
+
+		if (existing is { Count: > 0 })
+		{
+			HashSet<string> taken = existing
+				.Select(period => period.Name?.Trim() ?? "")
+				.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+			for (int suffix = 2; taken.Contains(name); suffix++)
+				name = $"{Stem} {suffix}";
+
+			foreach (TimePeriodConfig period in existing)
+				takenIds.Add(period.Key);
+		}
+
+		return new TimePeriodConfig
+		{
+			Id = StableId.Create(name, takenIds),
+			Name = name,
+			Start = "12:00",
+			Temperature = 20
+		};
+	}
+
+	private async Task Add()
+	{
+		Periods.Add(NewPeriod(Periods));
+		await Changed.InvokeAsync().ConfigureAwait(false);
+	}
+
+	private async Task Remove(int index)
+	{
+		Periods.RemoveAt(index);
+		await Changed.InvokeAsync().ConfigureAwait(false);
+	}
+
+	private async Task Move(int index, int delta)
+	{
+		int target = index + delta;
+		if (target < 0 || target >= Periods.Count)
+			return;
+
+		(Periods[index], Periods[target]) = (Periods[target], Periods[index]);
+		await Changed.InvokeAsync().ConfigureAwait(false);
+	}
+}

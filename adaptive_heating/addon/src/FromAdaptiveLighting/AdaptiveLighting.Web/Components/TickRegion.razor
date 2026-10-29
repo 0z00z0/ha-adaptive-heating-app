@@ -1,0 +1,49 @@
+@implements IDisposable
+
+@* Draws its content again on every beat of the page's clock, and adds no element of its own. Wrap what moves:
+   a countdown, a relative time, a board. Everything left outside is drawn again only when the model says a
+   value it shows has changed. *@
+
+@ChildContent
+
+@code {
+	/// <summary>The page model's clock.</summary>
+	[Parameter]
+	[EditorRequired]
+	public IPageClock Clock { get; set; } = default!;
+
+	/// <summary>What is drawn again each second.</summary>
+	[Parameter]
+	public RenderFragment? ChildContent { get; set; }
+
+	private IPageClock? _listening;
+
+	/// <inheritdoc/>
+	protected override void OnParametersSet()
+	{
+		if (ReferenceEquals(_listening, Clock))
+			return;
+
+		Unsubscribe();
+
+		_listening = Clock;
+
+		if (_listening is not null)
+			_listening.Tick += Redraw;
+	}
+
+	// The model raises the beat on the render thread already; InvokeAsync keeps that true for any design that
+	// hands the region a clock of its own.
+	private void Redraw() => _ = InvokeAsync(StateHasChanged);
+
+	private void Unsubscribe()
+	{
+		if (_listening is not null)
+			_listening.Tick -= Redraw;
+
+		_listening = null;
+	}
+
+	/// <inheritdoc/>
+	public void Dispose() => Unsubscribe();
+}

@@ -1,0 +1,236 @@
+@namespace Adaptive.UI
+@* There is no merge, so every line in the warning is computed from the plan the engine will carry out.
+   Nothing here writes: confirming mutates the in-memory document and arms the ordinary save bar. *@
+
+<div class="panel setup-panel">
+	@if (_plan is null || _step == Step.Pick)
+	{
+		<h3 class="setup-title info-host">
+			<span class="info-line">
+				Set up rooms again
+				<InfoPopover Label="Set up rooms again">
+					Each ticked room is rebuilt from what Home Assistant knows right now, as if it were newly found.
+					Nothing changes until the next step is confirmed.
+				</InfoPopover>
+			</span>
+		</h3>
+
+		@if (Rebuildable.Count == 0)
+		{
+			<p class="hint">No room names an area &mdash; nothing to rebuild</p>
+		}
+		else
+		{
+			<label class="setup-all">
+				<input type="checkbox" @bind:get="IncludesEveryRoom" @bind:set="SetIncludeAll" />
+				Include all
+			</label>
+
+			<ul class="setup-rooms">
+				@foreach (AreaConfig area in Rebuildable)
+				{
+					string areaId = area.AreaId!;
+					<li>
+						<label>
+							<input type="checkbox"
+								   checked="@_ticked.Contains(areaId)"
+								   @onchange="args => Tick(areaId, args.Value is true)" />
+							<span class="setup-room-name">@AreaNaming.DisplayName(area, NameOf)</span>
+							<code class="area-slug">@areaId</code>
+						</label>
+					</li>
+				}
+			</ul>
+		}
+
+		@if (Skipped > 0)
+		{
+			<p class="hint">
+				@Skipped @(Skipped == 1 ? "room has" : "rooms have") no Home Assistant area and can't be rebuilt, so
+				@(Skipped == 1 ? "it isn't" : "they aren't") listed.
+			</p>
+		}
+
+		@if (NewRoomsNote is { Length: > 0 } newRooms)
+		{
+			<p class="hint">@newRooms</p>
+		}
+
+		@if (_plan is { NotQualifying.Count: > 0 } withGaps)
+		{
+			@* GroupFold's markup: the first design's fold, which the heating page does not carry. *@
+			<details class="panel group-fold">
+				<summary class="group-summary">
+					<span class="group-title">@NotQualifyingTitle(withGaps)</span>
+					<InfoPopover Label="@NotQualifyingTitle(withGaps)">This only offers areas that already have a heater to command; here is why the rest do not.</InfoPopover>
+					<span class="area-chevron" aria-hidden="true"></span>
+				</summary>
+				<ul class="setup-not-qualifying">
+					@foreach (SkippedArea skipped in withGaps.NotQualifying)
+					{
+						<li><strong>@(NameOf?.Invoke(skipped.AreaId) ?? skipped.AreaId)</strong> — @skipped.Reason</li>
+					}
+				</ul>
+			</details>
+		}
+
+		<div class="panel-actions">
+			<button type="button" class="primary" @onclick="Preview" disabled="@Nothing">Continue</button>
+			<button type="button" @onclick="Cancel">Cancel</button>
+		</div>
+	}
+	else
+	{
+		<h3 class="setup-title info-host">
+			<span class="info-line">
+				@SetupWarning.Title(_plan)
+				<InfoPopover Label="Set up again" Severity="InfoSeverity.Warn">
+					<span class="info-para">
+						Each room is rebuilt from what Home Assistant knows right now, as if it were newly found. Its
+						automatically-guessed behaviour is re-guessed; everything changed by hand is lost.
+					</span>
+					<span class="info-para">
+						Rooms stay switched on or off as they are now. Rooms not ticked are untouched.
+						@if (CommitNote is { Length: > 0 } commitNote)
+						{
+							@commitNote
+						}
+						else
+						{
+							<text>Nothing is written until <em>Save and apply</em> &mdash; <em>Discard changes</em> undoes this.</text>
+						}
+					</span>
+				</InfoPopover>
+			</span>
+		</h3>
+
+		@if (_lines.Count > 0)
+		{
+			<ul class="setup-losses">
+				@foreach (SetupWarningLine line in _lines)
+				{
+					<li>
+						<strong>@line.Name</strong> — @line.Consequence
+						@if (line.Note is { Length: > 0 } note)
+						{
+							<span class="hint">@note</span>
+						}
+					</li>
+				}
+			</ul>
+		}
+
+		@if (NewRoomsNote is { Length: > 0 } added)
+		{
+			<p>@added</p>
+		}
+
+
+		<div class="panel-actions">
+			<button type="button" class="primary" @onclick="Confirm">Set up again</button>
+			<button type="button" @onclick="Cancel">Cancel</button>
+		</div>
+	}
+</div>
+
+@code {
+	private enum Step
+	{
+		Pick,
+		Confirm
+	}
+
+	/// <summary>The document being edited, read here and never written.</summary>
+	[Parameter, EditorRequired]
+	public HeatingConfig Config { get; set; } = new();
+
+	/// <summary>The area ids ticked when the panel opens.</summary>
+	[Parameter]
+	public IReadOnlyCollection<string> PreTicked { get; set; } = [];
+
+	/// <summary>Works out what a scope would do, supplied by the page that owns the registry connection.</summary>
+	[Parameter, EditorRequired]
+	public Func<IReadOnlyCollection<string>, SetupPlan> PlanFor { get; set; } = _ => new SetupPlan([], [], []);
+
+	/// <summary>Resolves an area id to the name Home Assistant shows.</summary>
+	[Parameter]
+	public Func<string, string>? NameOf { get; set; }
+
+	[Parameter]
+	public EventCallback<SetupPlan> Confirmed { get; set; }
+
+	[Parameter]
+	public EventCallback Cancelled { get; set; }
+
+	/// <summary>What the host page does with the rebuild once it is confirmed; unset keeps the save bar's
+	/// wording, since only the page knows whether confirming writes at once.</summary>
+	[Parameter]
+	public string? CommitNote { get; set; }
+
+	private readonly HashSet<string> _ticked = new(StringComparer.Ordinal);
+
+	private SetupPlan? _plan;
+	private IReadOnlyList<SetupWarningLine> _lines = [];
+	private Step _step = Step.Pick;
+
+	/// <summary>The rooms a rebuild can act on; one that names no area has nothing to be rebuilt from.</summary>
+	private IReadOnlyList<AreaConfig> Rebuildable =>
+		[.. Config.Areas.Where(area => area.AreaId is { Length: > 0 })];
+
+	private int Skipped => Config.Areas.Count - Rebuildable.Count;
+
+	/// <summary>Whether confirming would do nothing: no room ticked, and no new room to add.</summary>
+	private bool Nothing => _ticked.Count == 0 && (_plan?.NewAreas.Count ?? 0) == 0;
+
+	private string? NewRoomsNote => _plan is null ? null : SetupWarning.NewRooms(_plan, NameOf);
+
+	private static string NotQualifyingTitle(SetupPlan plan) =>
+		plan.NotQualifying.Count == 1
+			? "1 other area Home Assistant has"
+			: $"{plan.NotQualifying.Count} other areas Home Assistant has";
+
+	/// <inheritdoc/>
+	protected override void OnInitialized()
+	{
+		foreach (string areaId in PreTicked)
+			_ticked.Add(areaId);
+
+		// The rooms this run would add are the same whatever is ticked, so the pick step can name them already.
+		_plan = PlanFor(_ticked);
+	}
+
+	private void Tick(string areaId, bool on)
+	{
+		if (on)
+			_ticked.Add(areaId);
+		else
+			_ticked.Remove(areaId);
+	}
+
+	/// <summary>Whether every rebuildable room is ticked; an empty list is not "all".</summary>
+	private bool IncludesEveryRoom =>
+		Rebuildable.Count > 0 && Rebuildable.All(area => _ticked.Contains(area.AreaId!));
+
+	private void SetIncludeAll(bool include)
+	{
+		_ticked.Clear();
+
+		if (!include)
+			return;
+
+		foreach (AreaConfig area in Rebuildable)
+			_ticked.Add(area.AreaId!);
+	}
+
+	private void Preview()
+	{
+		// Re-planned against what is ticked: the plan the warning counts must be the plan Confirm applies.
+		_plan = PlanFor(_ticked);
+		_lines = SetupWarning.Lines(_plan, Config);
+		_step = Step.Confirm;
+	}
+
+	private Task Confirm() => _plan is { } plan ? Confirmed.InvokeAsync(plan) : Task.CompletedTask;
+
+	private Task Cancel() => Cancelled.InvokeAsync();
+}

@@ -1,0 +1,120 @@
+@using AdaptiveLighting.Lamplight.Components.Kit
+
+<section class="glass" aria-label="Timeline">
+	<h2 class="sec-h">Timeline<small>@Model.SinceLine</small></h2>
+
+	<div class="tl">
+		<div class="tl-row tl-axis">
+			<span class="tl-name"></span>
+			<span class="tl-track">
+				@foreach (DateTimeOffset tick in Model.Ticks)
+				{
+					<span class="tick" style="@At(Model.Window.PercentAt(tick))">@BoardView.Clock(tick)</span>
+				}
+				<span class="tick now" style="@At(Model.NowPercent)">@Model.NowClock</span>
+			</span>
+		</div>
+
+		<div class="tl-row tl-band">
+			<span class="tl-name"></span>
+			<span class="tl-track">
+				@foreach (BandSegment segment in Model.Band)
+				{
+					<span class="band" style="@Span(segment.LeftPct, segment.WidthPct, segment.Temperature)" title="@segment.Name">
+						@if (DashboardPageModel.IsLabelled(segment))
+						{
+							<b>@segment.Name</b>
+						}
+					</span>
+				}
+			</span>
+		</div>
+
+		@foreach (FloorGroup<BoardLane> group in Model.Groups)
+		{
+			@* A floor whose lanes are all quiet loses its heading in CSS. *@
+			<div class="tl-group">
+				@if (Model.ShowsFloorHeader(group))
+				{
+					<div class="floor">@DashboardPageModel.FloorTitle(group.Floor)</div>
+				}
+				@foreach (BoardLane lane in group.Items)
+				{
+					@if (!Model.IsQuiet(lane))
+					{
+						StateMark mark = StateGlyph.For(lane.Latest);
+						<a class="tl-row lane" href="@HouseView.RoomHref(lane.AreaId)" title="@Model.LaneTitle(lane)" @key="lane.Key">
+							<span class="tl-name">
+								<Chip Kind="@ChipKind(mark.Family)" Word="@mark.Word" Bare="true" />
+								<span>@lane.Name</span>
+								@if (DashboardPageModel.HasWarning(lane.Latest))
+								{
+									<Bang Kind="warn" Title="Needs attention" />
+								}
+							</span>
+							<span class="tl-track">
+								@foreach (DateTimeOffset tick in Model.Ticks)
+								{
+									<span class="hour" style="@At(Model.Window.PercentAt(tick))"></span>
+								}
+								@foreach (LaneBlock block in lane.Blocks)
+								{
+									<span class="blk @BlockClass(block.Kind)" style="@Span(block.LeftPct, block.WidthPct, block.Temperature)"></span>
+								}
+								<span class="nowline" style="@At(Model.NowPercent)"></span>
+								@if (lane.Next is { } next)
+								{
+									<span class="nextmark" style="@At(next.LeftPct)" title="@next.Label"></span>
+								}
+							</span>
+						</a>
+					}
+				}
+			</div>
+		}
+
+		@if (Model.Quiet.Count > 0)
+		{
+			<div class="tl-quiet">
+				<span>Quiet:</span>
+				@foreach (FloorGroup<BoardLane> group in Model.Groups)
+				{
+					@foreach (BoardLane lane in group.Items)
+					{
+						@if (Model.IsQuiet(lane))
+						{
+							<a href="@HouseView.RoomHref(lane.AreaId)" title="@Model.LaneTitle(lane)" @key="lane.Key">@lane.Name</a>
+						}
+					}
+				}
+			</div>
+		}
+	</div>
+</section>
+
+@code {
+	[Parameter, EditorRequired]
+	public DashboardPageModel Model { get; set; } = default!;
+
+	// Invariant: under nb-NO a double renders 62,5 and the declaration is dropped.
+	private static string At(double pct) => $"left:{InvariantNumber.Format(pct, 3)}%";
+
+	// A temperature's own colour, so a block, a band and a tile draw the same scale.
+	private static string Span(double left, double width, double? temperature) =>
+		$"left:{InvariantNumber.Format(left, 3)}%;width:{InvariantNumber.Format(width, 3)}%;{(temperature is { } t ? $"--lampc:{TemperatureColour.Css(t)}" : "")}";
+
+	private static string ChipKind(string family) => family switch
+	{
+		"state-machine" => "heat",
+		"state-warn" => "dim",
+		"state-human" => "hand",
+		_ => "idle"
+	};
+
+	private static string BlockClass(LaneBlockKind kind) => kind switch
+	{
+		LaneBlockKind.Auto => "blk-auto",
+		LaneBlockKind.Hand => "blk-hand",
+		_ => "blk-held"
+	};
+}

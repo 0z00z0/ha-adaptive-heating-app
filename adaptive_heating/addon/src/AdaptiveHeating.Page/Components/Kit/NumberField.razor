@@ -1,0 +1,60 @@
+@* A number field. The value is written into the attribute invariantly and parsed back invariantly: a double
+	rendered under nb-NO reads 4,5, which no browser accepts in a number field, and the box shows empty.
+	Blazor's own @bind formats with the current culture, so this never uses it.
+
+	Five decimals, not one: the outdoor term is thousandths of full output per degree, and rounding it for
+	display would write a rounded number back the moment anybody touched the field. *@
+
+<span class="numfield">
+	@* The step guard, taken from the lighting engine's stepper: step="any" where there is no grain to declare,
+		because the browser marks a value off the step's grid invalid and its arrows snap it onto that grid. A
+		number the system fitted lands wherever the fit puts it, so it has no grain. *@
+	<input type="number"
+		   class="cell num"
+		   value="@InvariantNumber.Format(Value, 5)"
+		   min="@InvariantNumber.Format(Min, 5)"
+		   max="@InvariantNumber.Format(Max, 5)"
+		   step="@Grain"
+		   aria-label="@Label"
+		   @onchange="OnEdited" />
+	<span class="unit">@Unit</span>
+</span>
+
+@code {
+	[Parameter]
+	public double Value { get; set; }
+
+	[Parameter, EditorRequired]
+	public string Label { get; set; } = "";
+
+	[Parameter]
+	public string Unit { get; set; } = "°C";
+
+	[Parameter]
+	public double Min { get; set; } = 2;
+
+	[Parameter]
+	public double Max { get; set; } = 30;
+
+	/// <summary>How far one press of an arrow moves it, or <c>null</c> where the value sits on no grid.</summary>
+	[Parameter]
+	public double? Step { get; set; } = 0.5;
+
+	[Parameter]
+	public EventCallback<double> ValueChanged { get; set; }
+
+	private string Grain => Step is { } step ? InvariantNumber.Format(step, 5) : "any";
+
+	// An unparseable box is left alone rather than written down as zero: a half-typed number must not reach
+	// a room as a setting.
+	private Task OnEdited(ChangeEventArgs args)
+	{
+		if (args.Value is not string typed
+			|| !double.TryParse(typed, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double parsed))
+		{
+			return Task.CompletedTask;
+		}
+
+		return ValueChanged.InvokeAsync(Math.Clamp(parsed, Min, Max));
+	}
+}

@@ -1,0 +1,58 @@
+<div class="notice @(Note.IsWarning ? "warn" : "info") switch-note info-host">
+	<span class="info-line">
+		<strong class="switch-note-lead">@Note.Lead</strong>
+		@if (Note.Suspicious.Count > 0 || Note.OthersLine is { Length: > 0 } || Note.Advice is { Length: > 0 })
+		{
+			<InfoPopover Label="@Note.Lead" Severity="@(Note.IsWarning ? InfoSeverity.Warn : InfoSeverity.Neutral)">
+				@foreach (SuspectHeater suspect in Note.Suspicious)
+				{
+					<span class="info-para"><b>@suspect.Name</b> &mdash; @suspect.Reason</span>
+				}
+				@if (Note.OthersLine is { Length: > 0 } others)
+				{
+					<span class="info-para">@others</span>
+				}
+				@if (Note.Advice is { Length: > 0 } advice)
+				{
+					<span class="info-para">@advice</span>
+				}
+			</InfoPopover>
+		}
+	</span>
+
+	@if (Note.Suspicious.Count > 0)
+	{
+		<div class="switch-note-suspects">
+			@foreach (SuspectHeater suspect in Note.Suspicious)
+			{
+				<span class="gchip gchip-suspect" title="@suspect.Reason">
+					<span class="chip-name">@suspect.Name</span>
+					<code class="chip-id">@suspect.EntityId</code>
+				</span>
+			}
+		</div>
+	}
+
+	<div class="panel-actions">
+		@if (Note.Advice is { Length: > 0 } && AdviceHref is { Length: > 0 } href)
+		{
+			<a href="@href">Heaters and sensors</a>
+		}
+		<button type="button" @onclick="Dismiss">Got it</button>
+	</div>
+</div>
+
+@code {
+	/// <summary>The note to render, built by <see cref="SwitchOnWarning.For"/> and never here.</summary>
+	[Parameter, EditorRequired]
+	public SwitchOnNote Note { get; set; } = new("", [], [], null);
+
+	/// <summary>Where the include-label setting lives, when it is on another page.</summary>
+	[Parameter]
+	public string? AdviceHref { get; set; }
+
+	[Parameter]
+	public EventCallback Dismissed { get; set; }
+
+	private Task Dismiss() => Dismissed.InvokeAsync();
+}

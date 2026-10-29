@@ -1,0 +1,36 @@
+@using AdaptiveLighting.Lamplight.Components.Kit
+@using AdaptiveLighting.Web.Components
+@using AdaptiveLighting.Configuration
+
+@* Temperature, ahead of every other fold. Dropped entirely, not left open and empty, when the room has no
+   reading: such a room is switched on or off, and has no temperature to set. *@
+
+@if (Model.ShowLevelsCard)
+{
+	<Fold Id="levels"
+		  Title="Temperature"
+		  Summary="@Model.LevelsLede"
+		  Count="@(Model.OwnPeriodCount > 0 ? Model.OwnPeriodCount : null)"
+		  CountTitle="Periods this room sets for itself"
+		  Open="@Open"
+		  OpenChanged="@OpenChanged">
+		<LevelsEditor Periods="@Model.Periods"
+					  Room="@Room"
+					  ActivePeriod="@Model.ActivePeriodId"
+					  Changed="@Model.MarkDirty" />
+	</Fold>
+}
+
+@code {
+	[Parameter, EditorRequired]
+	public RoomPageModel Model { get; set; } = default!;
+
+	[Parameter]
+	public bool Open { get; set; }
+
+	[Parameter]
+	public EventCallback<bool> OpenChanged { get; set; }
+
+	// Room is null only when Area itself is null, which the page already gates on before this fold is drawn.
+	private AreaConfig Room => Model.Area!;
+}

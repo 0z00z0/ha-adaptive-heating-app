@@ -1,0 +1,169 @@
+@* Chips and not a browser multi-select: that needs ctrl-click for a second item and silently drops the list
+   without it. *@
+
+<div class="list-picker">
+	@if (Value.Count == 0)
+	{
+		<div class="list-empty">@EmptyLabel</div>
+	}
+	else
+	{
+		<ul class="chips">
+			@foreach (string entityId in Value)
+			{
+				<li class="chip @(Known(entityId) ? "" : "chip-bad")">
+					@* An id nothing can name, and a value that is not an entity at all, both name themselves.
+					   Rendering the span too would print the same text twice in one chip. *@
+					@if (NameOf(entityId) is { } name && !string.Equals(name, entityId, StringComparison.Ordinal))
+					{
+						<span class="chip-name">@name</span>
+					}
+					<code class="chip-id">@entityId</code>
+					<button type="button" class="chip-remove" title="Remove" aria-label="@($"Remove {NameOf(entityId)}")" @onclick="() => Remove(entityId)">&times;</button>
+				</li>
+			}
+		</ul>
+	}
+
+	<div class="picker picker-addrow">
+		@if (_manual || !HasOptions)
+		{
+			<input type="text"
+				   id="@Id"
+				   class="picker-text"
+				   placeholder="@Placeholder"
+				   value="@_typed"
+				   @onchange="OnTyped" />
+			<button type="button" class="picker-add" @onclick="AddTyped" disabled="@string.IsNullOrWhiteSpace(_typed)">Add</button>
+		}
+		else
+		{
+			@* An optgroup and not a disabled option, so the browser renders it as a heading a keyboard cannot
+			   land on. *@
+			<select id="@Id" class="picker-select" @bind:get="string.Empty" @bind:set="OnPicked">
+				<option value="">@AddLabel</option>
+				@foreach (EntityOption option in Available)
+				{
+					<option value="@option.EntityId">@option.Label</option>
+				}
+				@if (AvailableOthers.Count > 0)
+				{
+					<optgroup label="@OthersLabel">
+						@foreach (EntityOption option in AvailableOthers)
+						{
+							<option value="@option.EntityId">@option.Label</option>
+						}
+					</optgroup>
+				}
+			</select>
+		}
+
+		@* Both only mean something where there is a list to pick from. With none, the box is the only way in, and
+		   a disabled toggle beside it says so twice. *@
+		@if (HasOptions)
+		{
+			<button type="button" class="picker-mode" @onclick="ToggleMode">
+				@(_manual ? "Pick from list" : "Type an id")
+			</button>
+		}
+		else if (EmptyNote is { Length: > 0 })
+		{
+			<span class="picker-note">@EmptyNote</span>
+		}
+	</div>
+</div>
+
+@code {
+	/// <summary>The configured ids, in order; never <c>null</c>.</summary>
+	/// <summary>The id of the add box or list, for a label's for attribute.</summary>
+	[Parameter]
+	public string? Id { get; set; }
+
+	[Parameter]
+	public IReadOnlyList<string> Value { get; set; } = [];
+
+	/// <summary>Raised with the complete new list whenever it changes.</summary>
+	[Parameter]
+	public EventCallback<IReadOnlyList<string>> ValueChanged { get; set; }
+
+	/// <summary>The entities to offer, already filtered to the domains this field accepts.</summary>
+	[Parameter]
+	public IReadOnlyList<EntityOption> Options { get; set; } = [];
+
+	/// <summary>Everything else the field could use, offered under <see cref="OthersLabel"/> below
+	/// <see cref="Options"/>, which is what the room resolves to as it stands.</summary>
+	[Parameter]
+	public IReadOnlyList<EntityOption> Others { get; set; } = [];
+
+	[Parameter]
+	public string OthersLabel { get; set; } = "Everything else";
+
+	[Parameter]
+	public string EmptyLabel { get; set; } = "Nothing listed.";
+
+	[Parameter]
+	public string AddLabel { get; set; } = "Add…";
+
+	[Parameter]
+	public string Placeholder { get; set; } = "domain.entity_id";
+
+	/// <summary>Why there is nothing to pick, worded by the caller: an empty list usually means it was filtered
+	/// to an area, which this component cannot tell from a disconnected Home Assistant.</summary>
+	[Parameter]
+	public string EmptyNote { get; set; } = "Nothing to pick — type an id";
+
+	/// <summary>What an id is called and whether Home Assistant knows it, which drives the "unknown" chip
+	/// styling. Left unset, an id is its own name and every id is taken on trust.</summary>
+	[Parameter]
+	public EntityLookup? Lookup { get; set; }
+
+	private string? _typed;
+	private bool _manual;
+
+	private bool HasOptions => Options.Count > 0 || Others.Count > 0;
+
+	// Already-chosen entities are not offered again: the same light listed twice is commanded twice per tick.
+	private IReadOnlyList<EntityOption> Available => Unpicked(Options);
+
+	private IReadOnlyList<EntityOption> AvailableOthers => Unpicked(Others);
+
+	private IReadOnlyList<EntityOption> Unpicked(IReadOnlyList<EntityOption> options) =>
+		[.. options.Where(option => !Value.Contains(option.EntityId, StringComparer.Ordinal))];
+
+	private string NameOf(string entityId) => Lookup?.Name(entityId) ?? entityId;
+
+	private bool Known(string entityId) => Lookup?.Knows(entityId) ?? true;
+
+	private void ToggleMode() => _manual = !_manual;
+
+	private void OnTyped(ChangeEventArgs args) => _typed = args.Value as string;
+
+	private Task OnPicked(string picked) => string.IsNullOrWhiteSpace(picked) ? Task.CompletedTask : Add(picked);
+
+	private async Task AddTyped()
+	{
+		if (string.IsNullOrWhiteSpace(_typed))
+			return;
+
+		string value = _typed.Trim();
+		_typed = null;
+		await Add(value).ConfigureAwait(false);
+	}
+
+	private Task Add(string entityId)
+	{
+		if (Value.Contains(entityId, StringComparer.Ordinal))
+			return Task.CompletedTask;
+
+		return Commit([.. Value, entityId]);
+	}
+
+	private Task Remove(string entityId) =>
+		Commit([.. Value.Where(existing => !string.Equals(existing, entityId, StringComparison.Ordinal))]);
+
+	private Task Commit(IReadOnlyList<string> updated)
+	{
+		Value = updated;
+		return ValueChanged.InvokeAsync(updated);
+	}
+}

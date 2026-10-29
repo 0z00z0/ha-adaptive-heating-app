@@ -1,0 +1,2193 @@
+/* Served at _content/AdaptiveLighting.Web/controls.css, linked by both designs' roots. The shared leaf controls and
+   charts, drawn only from tokens both app.css and lamplight.css define. Linked after app.css, so a rule here wins
+   a tie with a generic element or control rule there. */
+
+/* The user agent's own [hidden] rule loses to any class rule setting display; the slider's two readouts rely on
+   it. app.css carries the same rule for the pages it alone draws. */
+[hidden] {
+	display: none !important;
+}
+
+/* ---- pickers ---- */
+
+.picker {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	flex-wrap: wrap;
+}
+
+/* One width for every picker, and it is a width, not a min-width: the People/Master/Sleep dropdowns
+   used to size themselves to their longest option and sat visibly ragged above one another. The
+   longest requirement decides for all of them. min(…, 100%) because 24rem is wider than a phone. */
+.picker-select, .picker-text {
+	width: min(24rem, 100%);
+	max-width: 100%;
+}
+
+.picker-mode {
+	font-size: 0.75rem;
+	padding: 0.2rem 0.5rem;
+}
+
+.picker-note {
+	font-size: 0.78rem;
+	color: var(--ink-2);
+}
+
+.picker-note.bad {
+	color: var(--bad);
+}
+
+.list-picker {
+	display: flex;
+	flex-direction: column;
+	gap: 0.6rem;
+	align-items: stretch;
+	width: 100%;
+	min-width: 0;
+}
+
+/* The add control sits on its own full-width row under the chips, with room to breathe. This control
+   has been photographed overlapping its own chips; the row-gap matters once the select and the
+   "Type an id" button wrap onto two lines. */
+.picker-addrow {
+	width: 100%;
+	row-gap: 0.5rem;
+}
+
+.picker-mode {
+	flex: 0 0 auto;
+}
+
+.list-empty {
+	color: var(--ink-2);
+	font-size: 0.82rem;
+	font-style: italic;
+}
+
+.cell-note {
+	font-size: 0.72rem;
+	color: var(--ink-2);
+	margin-top: 0.15rem;
+}
+
+.cell-note.bad {
+	color: var(--bad);
+}
+
+.info {
+	display: inline-flex;
+	vertical-align: middle;
+}
+
+/* The block an (i) panel opens under; the panel is absolute and needs a positioned ancestor. */
+.info-host {
+	position: relative;
+}
+
+/* A headline with its (i) beside it: one line, the explanation behind the icon. */
+.info-line {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	flex-wrap: wrap;
+}
+
+.info-icon {
+	width: 1.15rem;
+	height: 1.15rem;
+	padding: 0;
+	border-radius: 50%;
+	border: 1px solid var(--line);
+	background: var(--surface-2);
+	color: var(--ink-2);
+	font-family: Georgia, "Times New Roman", serif;
+	font-style: italic;
+	font-size: 0.72rem;
+	line-height: 1;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	flex: 0 0 auto;
+	position: relative;
+}
+
+/* A 24px target around the 1.15rem circle. */
+.info-icon::after {
+	content: "";
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	width: 24px;
+	height: 24px;
+	transform: translate(-50%, -50%);
+}
+
+.info-icon:hover,
+.info-icon[aria-expanded="true"] {
+	border-color: var(--accent);
+	color: var(--accent);
+}
+
+/* Severity: yellow is worth knowing, red needs attention. Filled so the colour reads at 1.15rem. */
+.info-icon.warn,
+.info-icon.warn:hover,
+.info-icon.warn[aria-expanded="true"] {
+	border-color: var(--warn);
+	background: var(--warn);
+	color: var(--bg);
+	font-weight: 700;
+}
+
+.info-icon.bad,
+.info-icon.bad:hover,
+.info-icon.bad[aria-expanded="true"] {
+	border-color: var(--bad);
+	background: var(--bad);
+	color: var(--bg);
+	font-weight: 700;
+}
+
+.info-icon:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 1px;
+}
+
+/* The press that closes it. Fixed and over the whole viewport so a click anywhere but the panel lands here,
+   under the panel's own z-index so the panel keeps its clicks, and over everything else so the click cannot
+   also work the control it landed on: dismissing and acting on one press is how somebody loses a setting
+   they only meant to stop reading about. Deliberately unpainted: this is a note, not a modal, and dimming
+   the page to read one help line would be louder than the line. */
+.info-scrim {
+	position: fixed;
+	inset: 0;
+	z-index: 39;
+	cursor: default;
+}
+
+.info-panel {
+	position: absolute;
+	z-index: 40;
+	left: 0;
+	top: calc(100% + 0.35rem);
+	width: min(26rem, 100%);
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+	/* Opaque, not frosted. It is absolutely positioned, so it necessarily paints over the field below it, and
+	   at 88% the covered field's own label and control read faintly through the help text: two settings in
+	   one place, which is worse than either. The float shadow is what says it is above the page; the fill's
+	   job is only to stop the page showing through. */
+	background: var(--surface);
+	border: 1px solid var(--line);
+	border-radius: var(--r);
+	box-shadow: var(--shadow-pop);
+	padding: 0.7rem 0.85rem;
+	color: var(--ink);
+	font-size: 0.82rem;
+	font-weight: 400;
+	font-style: normal;
+	line-height: 1.5;
+	text-transform: none;
+	letter-spacing: normal;
+	text-align: left;
+	cursor: auto;
+}
+
+.info-title {
+	font-weight: 600;
+	font-size: 0.78rem;
+	color: var(--accent);
+}
+
+.info-body {
+	color: var(--ink);
+}
+
+/* Several headlines in one notice stack, one per line. */
+.notice > .info-line {
+	display: flex;
+}
+
+.notice > .info-line + .info-line {
+	margin-top: 0.35rem;
+}
+
+/* One paragraph or list item of a longer explanation. */
+.info-para {
+	display: block;
+}
+
+.info-para + .info-para {
+	margin-top: 0.35rem;
+}
+
+.info-close {
+	align-self: flex-end;
+	font-size: 0.75rem;
+	padding: 0.2rem 0.6rem;
+}
+
+@media (max-width: 560px) {
+	/* A fixed sheet: never clipped, never off-screen, and closable with the thumb that opened it. */
+	.info-panel {
+		position: fixed;
+		left: 0.75rem;
+		right: 0.75rem;
+		top: auto;
+		bottom: 0.75rem;
+		width: auto;
+		box-shadow: var(--shadow-pop);
+	}
+}
+
+/* ---- period cards ----
+   One collapsible card per circadian period, the same <details> grammar as the area folds. Collapsed it is a
+   header: the name, when it starts (with the wall-clock time a sun boundary resolves to today), and its level at
+   a glance. Expanded, the controls sit on their own responsive grid: a desktop reads them in a line or two, a
+   phone stacks them, and nothing ever scrolls sideways or hides behind a scrollbar, which is what the
+   seven-column table this replaces did. */
+
+/* Unique to a period header: the start time, sitting between the name and the right-aligned level hint. The
+   fold, summary, title, hint and chevron all come from the unified "section folds" block in app.css. */
+.period-summary-start {
+	color: var(--ink-2);
+	font-size: 0.82rem;
+	font-variant-numeric: tabular-nums;
+}
+
+.period-actions {
+	margin-left: auto;
+	display: flex;
+	gap: 0.3rem;
+	white-space: nowrap;
+}
+
+.period-actions button {
+	padding: 0.15rem 0.45rem;
+	font-size: 0.78rem;
+}
+
+.period-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+	gap: 0.8rem 1.25rem;
+	margin-bottom: 0.9rem;
+}
+
+.pfield {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 0.35rem;
+	min-width: 0;
+}
+
+.pfield-label {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	font-size: 0.78rem;
+	font-weight: 600;
+	color: var(--ink-2);
+}
+
+/* ---- preset sliders ----
+   Fixed stops on a rail. The readout sits above the rail and never beside it, so the rail keeps the full
+   width of its column at every size: at 360px that is roughly 17px a stop, which a thumb can land on.
+
+   THE LEFTMOST STOP IS NOT A NUMBER. Where the surface has something above it to borrow from, position
+   zero means "state nothing here", and it has to be unmistakable from the dimmest setting. Four things
+   say it at once and none of them is a caption: the rail is hatched, not filled, the thumb is a
+   hollow ring, not a solid disc, the cap at the left end lights up, and the readout is words in
+   --off where a set value is a number in --ink.
+
+   --off is the token for watching without commanding, which is what inheriting is. It is defined in
+   every theme block already, so no new colour can reach one theme and miss another. */
+
+/* align-self, because a settings field is a column flex box that would otherwise size the rail to the width of
+   its readout: measured 130px of track inside a 260px field on the schedule editor.
+
+   --rail-unlit and --rail-edge are derived from --ink, not declared per theme: a surface colour lives in
+   three places in app.css, and a rail that reads in one theme and vanishes in another is what that costs.
+   --glow-track measured 1.32:1 against the panel in dark, 1.27 in light and 1.16 in 0z0: a rail nobody could
+   see the extent of. Half of --ink is 4.49 / 3.11 / 4.43, so every theme clears the 3:1 a control's own
+   boundary needs. */
+.psl {
+	align-self: stretch;
+	min-width: 0;
+	--rail-unlit: color-mix(in srgb, var(--ink) 50%, transparent);
+	--rail-edge: color-mix(in srgb, var(--ink) 35%, transparent);
+	/* Must match THUMB_WIDTH_PX in preset-slider.js: a native range thumb's screen position cannot be read back
+	   from the DOM, so the script works it out from this number and the two have to agree by hand. */
+	--psl-thumb: 22px;
+	/* A native thumb's centre travels inset by half its own width, so a fraction of the ladder is not a fraction
+	   of the track. --psl-fill and --psl-pocket arrive as bare fractions and this is the one place the inset is
+	   applied: the accent fill ends under the thumb, and --psl-zero-x is where the thumb docks on the first real
+	   stop, which is where the zero mark sits and where the house-default pocket stops. */
+	--psl-fill-x: calc(var(--psl-thumb) / 2 + var(--psl-fill, 0) * (100% - var(--psl-thumb)));
+	--psl-zero-x: calc(var(--psl-thumb) / 2 + var(--psl-pocket, 0) * (100% - var(--psl-thumb)));
+}
+
+/* The box the zero mark places itself against. Sized by the rail alone, so a percentage means the same thing
+   here as it does inside the track's own background.
+
+   min-width, because the readout shares this line: 17 stops need room for a thumb to land on one, and the
+   leftmost of them is the only way back to the house default. It sits here and not on the input, or the
+   wrapper shrinks past it and the rail overflows its own mark. */
+.psl-rail {
+	position: relative;
+	display: flex;
+	flex: 1 1 auto;
+	min-width: 9rem;
+}
+
+/* The rail itself is painted here and not in the range's own track pseudo-element, because the geometry has to
+   mix a percentage with a pixel: a native thumb's centre travels inset by half its width. Measured in Chromium,
+   a percentage inside a calc() resolves against a zero-width box in ::-webkit-slider-runnable-track, so the
+   accent stop at calc(11px + 0.625 * (100% - 22px)) came out as 0 and the fill disappeared entirely while a
+   bare 62.5% stop had always worked. On an ordinary element it resolves normally, and one rule replaces the
+   four vendor-specific ones this used to need. */
+.psl-rail::before {
+	content: "";
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 50%;
+	height: 10px;
+	transform: translateY(-50%);
+	border-radius: 999px;
+	box-shadow: inset 0 0 0 1px var(--rail-edge);
+	background: linear-gradient(to right,
+		var(--accent) 0 var(--psl-fill-x),
+		var(--rail-unlit) var(--psl-fill-x) 100%);
+	pointer-events: none;
+}
+
+.psl-label {
+	flex: 0 0 auto;
+	font-size: var(--t-xs);
+	letter-spacing: var(--label-track);
+	text-transform: uppercase;
+	color: var(--ink-2);
+}
+
+/* The readout follows the rail in the markup and takes the line above it by default: inside a settings column
+   about 300px wide, sharing the line leaves a borrowing brightness rail 7.9px a stop against 17.2 with the line
+   to itself, and a 17-stop rail nobody can aim at is worse than a line. The room page's stacked rows are full
+   width and take it back beside the rail. */
+.psl-read {
+	display: inline-flex;
+	align-items: center;
+	order: -1;
+	flex: 0 1 100%;
+	gap: 0.35rem;
+	min-width: 0;
+	font-size: var(--t-sm);
+}
+
+.psl-value-group,
+.psl-borrow-group {
+	max-width: 100%;
+}
+
+/* A borrowed reading is a bare number and never wraps. A stated one may carry its stop's wording, which is
+   allowed to take a second line instead of running off the card. */
+.psl-borrowed {
+	white-space: nowrap;
+}
+
+.psl-value {
+	min-width: 0;
+	font-weight: 650;
+	color: var(--ink);
+	overflow-wrap: anywhere;
+}
+
+/* A hand-edited number keeps its own stop instead of snapping to a neighbour, and says so. */
+.psl-custom {
+	padding: 0 0.3rem;
+	border-radius: var(--radius-chip);
+	background: var(--inset);
+	font-size: var(--t-xs);
+	color: var(--ink-2);
+}
+
+.psl-default-text {
+	color: var(--off);
+}
+
+.psl-borrowed {
+	font-size: var(--t-xs);
+	color: var(--off);
+}
+
+/* Wrappers around the two readout states so JS can toggle one hidden attribute each while a drag crosses the
+   pocket boundary, without rebuilding either subtree. */
+.psl-borrow-group,
+.psl-value-group {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	min-width: 0;
+}
+
+/* Drawn, not typed: an elbow arrow saying the number comes from somewhere else, with no font to depend on. */
+.psl-glyph {
+	width: 8px;
+	height: 8px;
+	flex: 0 0 auto;
+	margin-bottom: 2px;
+	border-left: var(--stroke-control) solid var(--off);
+	border-bottom: var(--stroke-control) solid var(--off);
+	border-bottom-left-radius: 2px;
+}
+
+/* position: relative so the satellite (an absolutely positioned sibling of the input) places itself against
+   this box, not the page. */
+.psl-line {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 0.15rem 0.4rem;
+	min-width: 0;
+	position: relative;
+}
+
+/* The zero mark: a graduation across the rail where the real scale starts, with the house-default pocket
+   continuing left past it. Taller than the track and shorter than the thumb, so it reads as a mark on the rail
+   and the thumb covers it when the value really is 0. pointer-events, or a tap on 0 % would never reach the
+   input underneath. Faint until the thumb is in the pocket, then solid. */
+.psl-home {
+	position: absolute;
+	top: 50%;
+	left: var(--psl-zero-x);
+	width: 2px;
+	height: 18px;
+	transform: translate(-50%, -50%);
+	border-radius: 1px;
+	background: var(--rail-unlit);
+	pointer-events: none;
+}
+
+.psl-default .psl-home {
+	background: var(--off);
+}
+
+/* position and z-index, so the thumb paints over the rail its wrapper draws underneath. */
+.psl-range {
+	-webkit-appearance: none;
+	appearance: none;
+	position: relative;
+	z-index: 1;
+	flex: 1 1 auto;
+	min-width: 0;
+	height: 2.25rem;
+	margin: 0;
+	padding: 0;
+	background: none;
+	border: 0;
+	cursor: pointer;
+	touch-action: manipulation;
+	/* A press-and-hold on the thumb feeds the brightness satellite (preset-slider.js), not a callout or a text
+	   selection some mobile browsers offer on a long press. */
+	-webkit-touch-callout: none;
+	user-select: none;
+}
+
+.psl-range:focus-visible {
+	outline: var(--stroke-control) solid var(--accent);
+	outline-offset: 2px;
+	border-radius: var(--radius-chip);
+}
+
+/* Height only. The visible rail is .psl-rail::before; these boxes exist so each engine has something to
+   position its thumb against. */
+.psl-range::-webkit-slider-runnable-track {
+	height: 10px;
+	background: none;
+}
+
+.psl-range::-moz-range-track {
+	height: 10px;
+	background: none;
+}
+
+.psl-range::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	appearance: none;
+	width: var(--psl-thumb);
+	height: var(--psl-thumb);
+	margin-top: -6px;
+	border: 0;
+	border-radius: 999px;
+	background: var(--accent);
+	box-shadow: 0 0 0 2px var(--surface);
+}
+
+.psl-range::-moz-range-thumb {
+	width: var(--psl-thumb);
+	height: var(--psl-thumb);
+	border: 0;
+	border-radius: 999px;
+	background: var(--accent);
+	box-shadow: 0 0 0 2px var(--surface);
+}
+
+/* The house-default pocket: hatched and recessed, running from the left end of an inheritable rail up to
+   --psl-zero-x, which is where the thumb docks on the first real stop and where .psl-home draws the zero mark.
+   The rail therefore continues past that mark to the left, into a zone outside the 0-100 range instead of the
+   dimmest real setting. The hatch is drawn on top of the ordinary fill/track gradient.
+
+   The recess is a flat gradient and not the bare colour it looks like: only the last layer of a background may
+   be a colour, and one in a middle layer takes the whole shorthand down with it, which is why nothing of this
+   pocket used to reach the screen. */
+.psl-inheritable .psl-rail::before {
+	background:
+		repeating-linear-gradient(135deg,
+			color-mix(in srgb, var(--off) 55%, transparent) 0 2px,
+			transparent 2px 6px) 0 0 / var(--psl-zero-x) 100% no-repeat,
+		linear-gradient(var(--off-bg), var(--off-bg)) 0 0 / var(--psl-zero-x) 100% no-repeat,
+		linear-gradient(to right,
+			var(--accent) 0 var(--psl-fill-x),
+			var(--rail-unlit) var(--psl-fill-x) 100%);
+}
+
+.psl-default .psl-range::-webkit-slider-thumb {
+	background: var(--surface);
+	box-shadow: inset 0 0 0 var(--stroke-mark) var(--off), 0 0 0 2px var(--surface);
+}
+
+.psl-default .psl-range::-moz-range-thumb {
+	background: var(--surface);
+	box-shadow: inset 0 0 0 var(--stroke-mark) var(--off), 0 0 0 2px var(--surface);
+}
+
+/* Brightness-only fine-adjust handle, revealed by preset-slider.js on a press-and-hold of the primary thumb.
+   The tappable box is the standard ~44px touch target; the visible mark stays small so it still reads as a
+   satellite of the thumb, not a second control. `left` is set inline by JS to the thumb's live position;
+   this rule only supplies the fixed vertical offset and the box itself. */
+.psl-satellite {
+	position: absolute;
+	top: 50%;
+	z-index: 2;
+	width: 44px;
+	height: 44px;
+	margin-left: -22px;
+	margin-top: -44px;
+	touch-action: none;
+	-webkit-touch-callout: none;
+	user-select: none;
+}
+
+.psl-satellite::before {
+	content: "";
+	position: absolute;
+	left: 50%;
+	bottom: 6px;
+	width: 12px;
+	height: 12px;
+	transform: translateX(-50%);
+	border-radius: 999px;
+	background: var(--surface);
+	box-shadow: 0 0 0 2px var(--accent), inset 0 0 0 var(--stroke-mark) var(--accent);
+}
+
+/* The raw 0-255 value the handle is on, which is the scale it actually steps: a whole percent covers two or
+   three raw steps, so a percentage here could not show what one step did. Written by preset-slider.js while the
+   handle is dragged, and rendered by PresetSlider so it is right the instant the handle appears. */
+.psl-raw {
+	position: absolute;
+	left: 50%;
+	bottom: 22px;
+	transform: translateX(-50%);
+	padding: 0.05rem 0.35rem;
+	border-radius: var(--radius-chip);
+	background: var(--inset);
+	box-shadow: 0 0 0 1px var(--rail-edge);
+	font-family: var(--font-num);
+	font-size: var(--t-xs);
+	font-variant-numeric: tabular-nums;
+	color: var(--ink);
+	white-space: nowrap;
+	pointer-events: none;
+}
+
+/* A short stem ties the mark visually to the thumb it sits above. */
+.psl-satellite::after {
+	content: "";
+	position: absolute;
+	left: 50%;
+	bottom: -6px;
+	width: 2px;
+	height: 10px;
+	background: var(--accent);
+}
+
+/* ---- the structured start control ---- */
+
+.start-editor {
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+	flex-wrap: wrap;
+	min-width: 0;
+	max-width: 100%;
+}
+
+.start-editor .cell {
+	min-width: 0;
+}
+
+.start-editor .cell-note {
+	flex-basis: 100%;
+}
+
+/* ---- daylight chart ----
+   A year of daylight as hand-built SVG. The background is three stacked themed bands (night, civil twilight,
+   daylight), never a flat black; the period boundaries and the today marker sit over them. Additive. */
+
+.daylight-chart {
+	margin-bottom: 1rem;
+	container: daylightchart / inline-size;
+
+	/* 730 is DaylightChart's viewBox width. tan(atan2(a, b)) is a / b. */
+	--chart-unit: tan(atan2(730px, 100cqw));
+}
+
+.daylight-svg {
+	display: block;
+	width: 100%;
+	height: auto;
+	border: 1px solid var(--line);
+	border-radius: var(--r);
+	background: var(--surface);
+}
+
+.daylight-night { fill: var(--daylight-night); }
+.daylight-twilight { fill: var(--daylight-twilight); }
+.daylight-day { fill: var(--daylight-day); }
+
+.daylight-grid {
+	stroke: var(--line);
+	stroke-width: 1;
+	opacity: 0.45;
+}
+
+.daylight-month {
+	stroke: var(--line);
+	stroke-width: 1;
+	opacity: 0.3;
+}
+
+/* Every chart label carries a --daylight-halo outline (paint-order draws the stroke first, under the fill) so it
+   stays legible over the mid-tone bands in both themes: the halo is dark where the text is light and light where
+   it is dark, so it always separates the glyphs from the band behind them. */
+.daylight-axis,
+.daylight-period-label,
+.daylight-mark-label,
+.daylight-dst-label {
+	paint-order: stroke fill;
+	stroke: var(--daylight-halo);
+	stroke-width: 2.4px;
+	stroke-linejoin: round;
+	stroke-linecap: round;
+}
+
+.daylight-axis {
+	fill: var(--ink);
+	opacity: 0.9;
+	font-size: 9px;
+	font-family: var(--font-num);
+}
+
+/* The month row sits in a gutter under the plot, not over the night band, so it has no band to be read
+   against and the halo would only thicken into the glyphs. */
+.daylight-month-label {
+	stroke: none;
+	opacity: 0.75;
+}
+
+.daylight-period {
+	fill: none;
+	stroke: var(--accent);
+	stroke-width: 1.5;
+	opacity: 0.95;
+}
+
+.daylight-period-label {
+	fill: var(--accent);
+	font-size: 9px;
+	font-weight: 600;
+}
+
+.daylight-today {
+	stroke: var(--ink);
+	stroke-width: 1;
+	stroke-dasharray: 3 3;
+	opacity: 0.7;
+}
+
+/* Daylight-saving changeover markers: faint and dashed, so the hour-step in the curves reads as intentional. */
+.daylight-dst {
+	stroke: var(--ink-2);
+	stroke-width: 1;
+	stroke-dasharray: 2 4;
+	opacity: 0.5;
+}
+
+.daylight-dst-label {
+	fill: var(--ink-2);
+	font-size: 7px;
+	font-weight: 600;
+	letter-spacing: 0.02em;
+}
+
+.daylight-mark {
+	fill: var(--ink);
+}
+
+.daylight-mark-label {
+	fill: var(--ink);
+	font-size: 9px;
+	font-weight: 600;
+	font-family: var(--font-num);
+}
+
+.daylight-caption {
+	color: var(--ink-2);
+	font-size: 0.82rem;
+	margin: 0.5rem 0 0;
+}
+
+/* Chart type is in SVG user units, so it shrinks with the drawing: 9 units rendered 3.8 real pixels at 390 px.
+   --chart-unit is the viewBox width over the rendered width, so multiplying a wanted pixel size by it holds a
+   label the same physical size at any width. Sizing and the two viewBox widths are in docs/mechanisms.md.
+
+   The 15-unit cap is DaylightChart.MaxLabelUnits, which sizes the label spread and the month gutter from it.
+   Raise it here alone and close boundaries overlap, and December meets the last period label again. */
+@supports (font-size: calc(tan(atan2(1px, 1px)) * 1px)) {
+	@container daylightchart (min-width: 1px) {
+		.daylight-axis,
+		.daylight-period-label,
+		.daylight-mark-label {
+			font-size: min(calc(var(--chart-unit) * 10.1px), 15px);
+		}
+
+		.daylight-dst-label {
+			font-size: min(calc(var(--chart-unit) * 7.9px), 11.7px);
+		}
+
+		/* The halo is a stroke, so it scales with the viewBox too and would thicken into the glyphs. */
+		.daylight-axis,
+		.daylight-period-label,
+		.daylight-mark-label,
+		.daylight-dst-label {
+			stroke-width: calc(var(--chart-unit) * 2.7px);
+		}
+	}
+}
+
+/* ---- house-mode options ----
+   One row per option: its value and a radio group for its single Kind, with the sub-fields that kind uses
+   revealed beneath. Additive. */
+
+.housemode-options {
+	display: flex;
+	flex-direction: column;
+	gap: 0.6rem;
+}
+
+.housemode-note {
+	margin-bottom: 0;
+}
+
+.housemode-kinds {
+	display: inline-flex;
+	gap: 0.15rem 0.75rem;
+	flex-wrap: wrap;
+}
+
+.housemode-kind {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
+	font-size: 0.85rem;
+	color: var(--ink);
+	white-space: nowrap;
+}
+
+.housemode-sub {
+	margin-top: 0.7rem;
+	padding-top: 0.7rem;
+	border-top: 1px solid var(--line);
+	display: flex;
+	flex-direction: column;
+	gap: 0.7rem;
+}
+
+.housemode-field {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 0.3rem;
+	min-width: 0;
+}
+
+.housemode-field-label {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	font-size: 0.8rem;
+	font-weight: 600;
+	color: var(--ink-2);
+}
+
+/* The label around the box only, so the (i) beside it can stay outside the label. Same gap as the
+   .housemode-field-label it sits in, whose weight, size and colour it inherits. */
+.housemode-check {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	cursor: pointer;
+}
+
+.housemode-resets {
+	display: flex;
+	flex-direction: column;
+	gap: 0.6rem;
+	border-left: 2px solid var(--line);
+	padding-left: 0.75rem;
+}
+
+.housemode-resets-head {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	font-size: 0.78rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--ink-2);
+}
+
+.housemode-presence {
+	display: flex;
+	flex-direction: column;
+	gap: 0.4rem;
+	width: 100%;
+}
+
+.housemode-grace {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+}
+
+.housemode-grace .cell.num {
+	width: 4.5rem;
+}
+
+/* ---- house-mode option folds ----
+   One collapsible card per option, the same <details> grammar as an area or a period fold. Collapsed it is a
+   header: the option value, its Kind, and a hint of its key settings; expanded, the full editor. Additive: the
+   .housemode-kinds / .housemode-sub / .housemode-field rules above still style the body unchanged. */
+
+/* Unique to a house-mode header: the orphan state (an option the live select no longer offers), the mono option
+   value, the Kind badge, and the body spacing. Everything else (fold, summary, hover, open state, hint,
+   chevron) comes from the unified "section folds" block in app.css. */
+.housemode-fold.orphan {
+	border-color: var(--bad);
+	border-left-color: var(--bad);
+	border-style: dashed;
+}
+
+.housemode-fold > .housemode-kinds {
+	margin-top: 0.75rem;
+}
+
+.housemode-fold > .housemode-sub {
+	margin-bottom: 0.9rem;
+}
+
+/* The option value reads as the card's name, styled like an area or period title: plain body face,
+   white, not the mono/accent that a bare <code> would give it (which is why the markup is a <span>). */
+.housemode-summary-value {
+	font-weight: 600;
+	font-size: 1.02rem;
+	color: var(--ink);
+}
+
+.housemode-summary-kind {
+	text-transform: none;
+}
+
+/* ---- icons ----
+   Drawn once as <symbol>s by <IconSprite>, used everywhere by <Icon>. The glyph takes the text colour of
+   wherever it sits (currentColor) and its one flat accent from --icon-accent, which each theme sets to brass.
+   The sizes are a short list on purpose: 18px beside a line of body text, 15px on a chip, 22px on a card head. */
+.ic {
+	width: 18px;
+	height: 18px;
+	flex: 0 0 auto;
+	display: block;
+}
+
+.ic-sm { width: 15px; height: 15px; }
+.ic-lg { width: 22px; height: 22px; }
+
+/* A section head's glyph is furniture, not the subject: muted outline, brass accent, never competing with the
+   heading beside it. */
+.ic-head {
+	color: var(--ink-2);
+	width: 17px;
+	height: 17px;
+}
+
+/* The sprite itself never draws. It is a bag of definitions hosted once by the layout; without this it
+   reserves a line box at the top of every page. */
+.icon-sprite {
+	display: none;
+}
+
+/* margin: 0 because these are <p> elements and the UA's 1em margins would stack on top of the padding, which
+   opens a hole between a sentence and the rule under it wide enough to read as a missing paragraph. */
+.sentence {
+	margin: 0;
+	padding: 0.6rem 0;
+	border-top: var(--rule-inner);
+	font-size: var(--t-md);
+	line-height: 1.9;
+}
+
+.sentence:first-child {
+	border-top: 0;
+}
+
+/* The token. Brass on hover and focus, because brass means "you can change this": the accent budget's whole
+   job in one control. An amber dot, not an amber box, marks a value this room owns: the box is about
+   editability and the dot about provenance, and merging them would make one signal do two jobs. */
+.tok {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
+	background: var(--inset);
+	border: var(--stroke-hair) solid var(--line);
+	border-radius: var(--radius-chip);
+	padding: 0.05rem 0.45rem;
+	margin: 0 1px;
+	font-family: var(--font-num);
+	font-size: var(--t-md);
+	font-weight: 600;
+	color: inherit;
+	line-height: 1.7;
+	white-space: nowrap;
+	cursor: pointer;
+	vertical-align: baseline;
+}
+
+.tok:hover,
+.tok[aria-expanded="true"] {
+	border-color: var(--accent);
+	color: var(--accent);
+}
+
+.tok:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
+/* Not editable, and saying so in the shape: a dashed edge reads as "a value, not a control" without needing a
+   tooltip to explain the difference. */
+.tok-fixed {
+	border-style: dashed;
+	color: var(--ink-2);
+	cursor: default;
+}
+
+.tok-fixed:hover {
+	border-color: var(--line);
+	color: var(--ink-2);
+}
+
+/* The provenance dot. Amber, and the same amber the settings rows use for an override, so "this one is mine" is
+   one mark learned once. Deliberately NOT the accent: brass says editable, amber says changed. */
+.tok-own-dot {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--warn);
+	flex: 0 0 auto;
+}
+
+/* Not editable and not a control: the House tab's defaults render this way, because editing a default is the
+   rarer act and its rows are one tap below. */
+.tok-static {
+	font-weight: 650;
+	font-variant-numeric: tabular-nums;
+}
+
+/* The token popover: curated common values, one tap each. One of the two things on a page that genuinely
+   floats, so one of the two that keeps a shadow.
+
+   position: absolute against .tok-host, which is position: relative. Anchoring a popover to a container that is
+   not a positioning context drops it in the page's bottom-left corner, a bug this project has fixed once
+   already, and the reason .tok-host exists at all. */
+.tok-host {
+	position: relative;
+	display: inline-block;
+}
+
+.tok-pop {
+	position: absolute;
+	z-index: 70;
+	left: 0;
+	top: calc(100% + 4px);
+	min-width: 10rem;
+	max-width: min(16rem, 80vw);
+	background: var(--surface);
+	border: var(--rule);
+	border-radius: var(--r);
+	box-shadow: var(--shadow-pop);
+	padding: 4px;
+	text-align: left;
+	white-space: normal;
+	line-height: 1.5;   /* its own, never the sentence's 1.9: a list is not prose */
+}
+
+.tok-pop button {
+	display: block;
+	width: 100%;
+	text-align: left;
+	background: none;
+	border: 0;
+	border-radius: var(--radius-chip);
+	padding: 0.3rem 0.6rem;
+	font-family: var(--font-num);
+	font-size: var(--t-md);
+	color: var(--ink);
+}
+
+.tok-pop button:hover:not(:disabled) {
+	background: var(--inset);
+	border-color: transparent;
+}
+
+.tok-pop button.cur {
+	color: var(--accent);
+	font-weight: 700;
+}
+
+.tok-pop-note {
+	display: block;
+	padding: 0.3rem 0.6rem 0.35rem;
+	font-size: var(--t-xs);
+	line-height: 1.45;
+	color: var(--ink-2);
+	font-family: var(--font-body);
+}
+
+/* On a phone the popover becomes a sheet pinned above the bottom edge: a token near the right-hand margin would
+   otherwise open a card half off the screen, and there is no CSS that flips it. The same move the info popover
+   already makes, for the same reason. */
+@media (max-width: 560px) {
+	.tok-pop {
+		position: fixed;
+		left: 0.75rem;
+		right: 0.75rem;
+		top: auto;
+		bottom: 0.75rem;
+		max-width: none;
+		min-width: 0;
+	}
+
+	.tok-pop button {
+		padding: 0.55rem 0.7rem;   /* a row a thumb can hit */
+	}
+}
+
+/* A figure set inside a sentence: a response curve, a band. Sized to the line it sits on and given the same
+   air a token gets, so a paragraph with one in it does not develop a bulge. */
+/* Straddling the baseline, not standing on it: an inline box's baseline is its bottom edge, so a 20px
+   figure aligned to the baseline floats a whole line above the words it belongs to. */
+.sentence-figure {
+	display: inline-flex;
+	align-items: center;
+	vertical-align: -0.4em;
+	margin: 0 2px;
+}
+
+.curve-glyph {
+	width: 40px;
+	height: 20px;
+	display: block;
+}
+
+/* The legend under a set of sentences: what the amber dot means, said once, where the dots are. */
+.sentence-legend {
+	display: flex;
+	align-items: center;
+	gap: 0.35rem;
+	margin: 0.15rem 0 0;
+	font-size: var(--t-sm);
+	color: var(--ink-2);
+}
+
+/* ---- the stepper ----
+   A number in its own natural grain, with the keyboard one tap deeper. Brass on the arrows because they are
+   the thing you press; the readout muted while the value is the house's and solid once the room owns it. */
+.stepper {
+	display: inline-flex;
+	align-items: center;
+	border: var(--stroke-control) solid var(--line);
+	border-radius: var(--radius-control);
+	overflow: hidden;
+	background: var(--surface-2);
+	flex: 0 0 auto;
+}
+
+.stepper-step,
+.stepper-value {
+	background: none;
+	border: 0;
+	border-radius: 0;
+	padding: 0;
+}
+
+.stepper-step {
+	width: 30px;
+	height: 30px;
+	color: var(--accent);
+	font-size: 1rem;
+	font-weight: 700;
+	line-height: 1;
+}
+
+.stepper-step:hover:not(:disabled) {
+	background: var(--inset);
+	border-color: transparent;
+}
+
+.stepper-step:disabled {
+	color: var(--ink-2);
+}
+
+.stepper-value {
+	min-width: 5.5rem;
+	height: 30px;
+	padding: 0 0.25rem;
+	font-family: var(--font-num);
+	font-size: var(--t-sm);
+	font-weight: 650;
+	text-align: center;
+	white-space: nowrap;
+}
+
+.stepper-value:hover:not(:disabled) {
+	border-color: transparent;
+	color: var(--accent);
+}
+
+.stepper-inherited {
+	color: var(--ink-2);
+	font-weight: 500;
+}
+
+.stepper-input {
+	width: 5.5rem;
+	height: 30px;
+	border: 0;
+	border-radius: 0;
+	background: var(--bg);
+	text-align: center;
+	font-family: var(--font-num);
+}
+
+/* ---- the number box ----
+   What a setting whose range spans decades gets instead of a stepper: a real field, always open, because the
+   value is typed, not nudged. Same 30px height, same control radius and same 1.5px border as the
+   stepper beside it, so the two read as one family of controls and not as a field somebody bolted on.
+
+   The refusal sits under the box in --bad and wraps to the box's own width, not the row's, so a long
+   sentence pushes the row taller instead of shoving the label off a phone. Empty it is removed outright, so
+   the live region costs no layout while it has nothing to say. Right-aligned with the control, which is where
+   the eye already is after pressing Enter. */
+.numbox {
+	display: inline-flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 0.25rem;
+	flex: 0 0 auto;
+}
+
+.numbox-row {
+	display: inline-flex;
+	align-items: baseline;
+	gap: 0.35rem;
+}
+
+.numbox-input[type="number"] {
+	width: 7rem;
+	padding: 0.25rem 0.5rem;
+	border-width: var(--stroke-control);
+	background: var(--surface-2);
+	font-family: var(--font-num);
+	font-size: var(--t-sm);
+	font-weight: 650;
+	text-align: right;
+	appearance: textfield;    /* Firefox, and the standard property */
+}
+
+/* The browser's own spinner is removed, not styled. It nudges by one, which is the grain this control exists
+   to reject: a chip promising a step of 1 lx on a field whose useful range is 3 to 10 000. It also lands as a
+   pale block inside a dark box, drawn by the platform in a palette no theme here defines. Arrow keys still
+   step for anyone who wants that, and a phone still gets the numeric keypad from type="number". */
+.numbox-input::-webkit-outer-spin-button,
+.numbox-input::-webkit-inner-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
+}
+
+/* Muted while the value is still the house's: the same fact the stepper's readout carries. */
+.numbox-inherited[type="number"] {
+	color: var(--ink-2);
+	font-weight: 500;
+}
+
+.numbox-input[aria-invalid="true"] {
+	border-color: var(--bad);
+}
+
+.numbox-refusal {
+	max-width: 15rem;
+	color: var(--bad);
+	font-size: var(--t-xs);
+	line-height: 1.35;
+	text-align: right;
+}
+
+.numbox-refusal:empty {
+	display: none;
+}
+
+.switch-note {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+}
+
+/* The lead is the sentence the switch just earned, so it is the one thing here
+   in ink, not muted. */
+.switch-note-lead {
+	display: block;
+}
+
+/* A grid of one column, not a wrapping row: each suspect is two lines
+   (a name and a reason), so they never fit side by side, and left to wrap they
+   come out as a ragged stack of thirteen different widths. One column makes it
+   a list, which is what it is. */
+.switch-note-suspects {
+	display: grid;
+	gap: var(--space-1);
+}
+
+/* A suspect wears the warning edge the notice does, so a chip carries its own
+   verdict when the eye lands on it, not on the sentence above. */
+.gchip-suspect {
+	border-left-color: var(--warn);
+	align-items: baseline;
+	gap: 0.15rem 0.4rem;
+	flex-wrap: wrap;
+}
+
+/* The reason, which is the whole of what makes this advice and not an
+   accusation: it is what somebody weighs before they act on it. */
+.chip-why {
+	flex-basis: 100%;
+	color: var(--ink-2);
+	font-size: var(--t-xs);
+}
+
+.switch-note-rest,
+.switch-note-advice {
+	margin: 0;
+}
+
+.switch-note-advice a {
+	margin-left: var(--space-2);
+	white-space: nowrap;
+}
+
+.switch-note .panel-actions {
+	margin: 0;
+	padding: 0;
+	border-top: 0;
+}
+
+@media (max-width: 640px) {
+	.switch-note-advice a {
+		display: block;
+		margin-left: 0;
+		white-space: normal;
+	}
+}
+
+/* ---- one period ----
+   A grid and not a table element: three columns of sliders do not fit 390px, and a settings row whose last
+   control lives behind a horizontal scrollbar is one nobody finds.
+
+   Below the three-column width the row is two lines, not five: the period, its start, the curve question and
+   the Test button share the first, and each rail carries its own number beside it underneath. */
+.lvl {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	gap: var(--space-2) var(--space-4);
+	padding: 0.7rem 1.15rem;
+	border-top: var(--rule-inner);
+	border-left: var(--stroke-mark) solid transparent;
+}
+
+.lvl-when {
+	grid-column: 1;
+}
+
+.lvl-act {
+	grid-column: 2;
+	grid-row: 1;
+}
+
+.lvl-cell:not(.lvl-act) {
+	grid-column: 1 / -1;
+}
+
+/* The rail is gone with the curve ticked, and with it the row's second line. The cell stays only where the
+   table has columns to hold. */
+.lvl-cell-curve {
+	display: none;
+}
+
+/* Test says what it does; a heading above one button is a line every row pays for. */
+.lvl-act .lvl-cell-label {
+	display: none;
+}
+
+/* Rail and readout share one line here, and a 17-stop rail needs the width more than a caption does: measured
+   at 390px, keeping both the label and the borrowed wording left 9.6px a stop, which no thumb lands on, against
+   13.7 without them. The number's own unit says which rail it is, the warmth swatch says it again, and
+   aria-label carries the name for a reader that cannot see either. Both come back at 780px. */
+.lvl .psl-label,
+.lvl .psl-default-text {
+	display: none;
+}
+
+/* The number sits after the rail with air before it: against the rail's end it reads as part of the control
+   and not as what the control currently says. margin, not the line's gap, which also separates the label
+   from the rail once the table has columns. */
+.lvl .psl-read {
+	order: 0;
+	flex: 0 1 auto;
+	margin-left: var(--space-3);
+	max-width: 48%;
+}
+
+/* Beside the period name, not under it, and at the far end of the line, not against the name: the two
+   are different questions and read as one run of text when they touch. margin-inline-start, so the line still
+   reads left to right under a right-to-left locale. Where the line is too narrow to hold both, the toggle wraps
+   as it always did and auto resolves to nothing. Baseline with the name, so the box lines up with the type. */
+.lvl-curve-toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
+	margin-inline-start: auto;
+	font-size: var(--t-sm);
+	color: var(--ink-2);
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+.lvl-curve-toggle input {
+	margin: 0;
+	accent-color: var(--accent);
+}
+
+/* The headings, said once. Below the three-column width there is no table to head: the rows stack, each
+   rail carries its own label, and a heading row sitting above four stacked periods would name nothing
+   near it. */
+.lvl-head {
+	display: none;
+	padding-bottom: 0.35rem;
+	border-top: 0;
+}
+
+.lvl-head-cell {
+	font-size: var(--t-xs);
+	letter-spacing: var(--label-track);
+	text-transform: uppercase;
+	color: var(--ink-2);
+}
+
+@media (min-width: 780px) {
+	.lvl,
+	.lvl-head {
+		grid-template-columns: minmax(8rem, 0.85fr) minmax(11rem, 1fr) minmax(11rem, 1fr) auto;
+		align-items: start;
+	}
+
+	.lvl-head {
+		display: grid;
+	}
+
+	.lvl-when,
+	.lvl-cell:not(.lvl-act),
+	.lvl-act {
+		grid-column: auto;
+		grid-row: auto;
+	}
+
+	/* An empty cell still has to hold its column, or the warmth rail slides under the Period heading. */
+	.lvl-cell-curve {
+		display: block;
+	}
+
+	/* Room enough for the words again once the table has columns, and the readout goes back above the rail so a
+	   column about 300px wide still leaves a thumb something to land on. */
+	.lvl .psl-default-text {
+		display: inline;
+	}
+
+	/* Back above the rail, so the air that separated it from the rail's end would only indent a line. */
+	.lvl .psl-read {
+		order: -1;
+		flex: 0 1 100%;
+		margin-left: 0;
+		max-width: 100%;
+	}
+}
+
+/* The row that is actually running, marked the way the schedule editor marks its active card: the
+   same accent edge, so "this is the one in force" reads identically on both pages. */
+.lvl-now {
+	border-left-color: var(--accent);
+	background: var(--surface-2);
+}
+
+.lvl-when {
+	display: flex;
+	align-items: baseline;
+	flex-wrap: wrap;
+	gap: 0.3rem 0.45rem;
+	min-width: 0;
+}
+
+.lvl-name {
+	font-size: var(--t-md);
+	font-weight: 650;
+}
+
+.lvl-start {
+	font-size: var(--t-sm);
+	color: var(--ink-2);
+}
+
+.lvl-cell {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 0.25rem;
+	min-width: 0;
+}
+
+.lvl-cell-label {
+	font-size: var(--t-xs);
+	letter-spacing: var(--label-track);
+	text-transform: uppercase;
+	color: var(--ink-2);
+}
+
+/* The actual warmth, not only its number: 2700 K and 4500 K are two different rooms, and a column of
+   four-digit numbers is the one form in which that difference is invisible.
+
+   --kelvin-weight / --kelvin-shade are the same pair the state chip's glyph uses, and they are needed for
+   the same reason: a Kelvin colour is rgb(255, g, b), so above about 4000 K it is very nearly white,
+   correct as light, and all but invisible as a filled block on a pale panel. Measured at 4500 K in the
+   light theme, where the swatch had disappeared entirely. Dark takes the colour as it comes. */
+.lvl-swatch {
+	width: 22px;
+	height: 10px;
+	border-radius: 2px;
+	flex: 0 0 auto;
+	background: color-mix(in srgb, var(--lvl-kelvin, var(--auto)) var(--kelvin-weight), var(--kelvin-shade));
+	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 25%, transparent);
+}
+
+/* ---- putting a row on the real lights ----
+   The action column. Not stretched like the two rail cells: a full-width button under a pair of sliders reads
+   as the row's primary control, and this one is a side trip. */
+.lvl-act {
+	align-items: start;
+	justify-content: start;
+}
+
+/* One width for both states, or the column and the button both jump every second the countdown ticks. */
+.lvl-test {
+	min-width: 6.6rem;
+	display: inline-flex;
+	align-items: baseline;
+	justify-content: center;
+	gap: 0.4rem;
+	white-space: nowrap;
+}
+
+/* --now is the token for the live edge, the same one the now-line and the running badge take, so a test
+   holding the real lights reads as live, not as another editable control. */
+.lvl-test-on {
+	border-color: var(--now);
+	color: var(--now);
+	background: color-mix(in srgb, var(--now) 14%, transparent);
+}
+
+/* Disabled because pressing it again would do nothing, never because it is unavailable. The dimming that says
+   unavailable has to come back off, or a running test reads as a dead button. */
+.lvl-test-on:disabled {
+	opacity: 1;
+	cursor: default;
+}
+
+.lvl-test-left {
+	font-variant-numeric: tabular-nums;
+	font-weight: 650;
+}
+
+/* Said once above the rows, in the flow, not in a tooltip: on a phone there is no hover to find a
+   reason with, and a column of dimmed buttons explains nothing on its own. */
+.lvl-test-off,
+.lvl-test-live {
+	margin: 0;
+	padding: 0.15rem 1.15rem 0.55rem;
+	font-size: var(--t-sm);
+}
+
+.lvl-test-off {
+	color: var(--ink-2);
+}
+
+.lvl-test-live {
+	color: var(--now);
+}
+
+/* ---- a period that no longer exists ----
+   Kept by the schema because a missing period is nearly always a rename in progress. Shown here, and
+   removable, because kept silently it is baggage that springs back the day the name returns. */
+.lvl-orphan {
+	background: var(--warn-bg);
+}
+
+.lvl-orphan .lvl-start {
+	color: var(--warn);
+}
+
+.lvl-orphan-value {
+	font-family: var(--font-num);
+	font-size: var(--t-md);
+}
+
+.lvl-drop {
+	font-size: var(--t-sm);
+	padding: 0.2rem 0.55rem;
+	color: var(--warn);
+	border-color: color-mix(in srgb, var(--warn) 45%, var(--line));
+}
+
+/* ---- the curve ----
+   Hand-built inline SVG, themed with the page's own tokens: no chart library, no CDN, nothing fetched.
+   The line is drawn in the accent because the line IS the control here (the same reason CurveGlyph's
+   path is), and in the same 2px mark weight the board's now-line uses. */
+.luxc {
+	margin-top: var(--space-3);
+}
+
+.luxc-plot {
+	position: relative;
+	container: luxcurve / inline-size;
+
+	/* 620 is LuxCurve.ViewWidth. */
+	--chart-unit: tan(atan2(620px, 100cqw));
+}
+
+.luxc-svg {
+	display: block;
+	width: 100%;
+	height: auto;
+	overflow: visible;
+}
+
+/* What a finger actually touches, laid over the plot area by LuxCurve.SurfaceStyle so the drawing and
+   the target cannot disagree about where the plot is.
+
+   touch-action: none is not a nicety: without it a touch drag scrolls the page and the chart never
+   moves, which is the whole feature gone on the device most likely to be holding it. */
+.luxc-surface {
+	position: absolute;
+	touch-action: none;
+	cursor: crosshair;
+}
+
+.luxc-dragging .luxc-surface {
+	cursor: grabbing;
+}
+
+.luxc-field {
+	fill: var(--lane);
+}
+
+.luxc-grid {
+	stroke: var(--line-soft);
+	stroke-width: var(--stroke-hair);
+}
+
+.luxc-axis {
+	fill: var(--ink-2);
+	font-family: var(--font-body);
+	font-size: 10px;
+}
+
+/* Six decades will not fit across a phone: measured at 390 px, "10000 lx" and "100000 lx" ran together into
+   one word. Alternate labels are marked in the markup, counted from the right so the top decade survives, and
+   dropped here. The gridlines stay, so the decades the labels no longer name are still marked. */
+@media (max-width: 44rem) {
+	.luxc-axis.luxc-thin,
+	.luxc-decade.luxc-thin {
+		display: none;
+	}
+}
+
+.luxc-decade {
+	fill: var(--ink-2);
+	font-family: var(--font-body);
+	font-size: 9px;
+	opacity: 0.72;
+}
+
+.luxc-line {
+	fill: none;
+	stroke: var(--accent);
+	stroke-width: var(--stroke-mark);
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+/* The house's own reading, in the live-edge colour the board's now-line uses. */
+.luxc-now {
+	stroke: var(--now);
+	stroke-width: var(--stroke-mark);
+	opacity: 0.75;
+}
+
+.luxc-now-dot {
+	fill: var(--now);
+}
+
+.luxc-now-label {
+	fill: var(--now);
+	font-family: var(--font-body);
+	font-size: 10px;
+	font-weight: 650;
+}
+
+.luxc-handle {
+	fill: var(--surface);
+	stroke: var(--accent);
+	stroke-width: var(--stroke-mark);
+	cursor: grab;
+}
+
+/* Painted on the circle, not drawn round its box: an outline on an SVG shape is a rectangle, and a square
+   ring round a handle sitting on the axis covers the label under it. LuxCurve.HandleReach is how far this ink
+   goes, and the geometry is laid out against that figure. */
+.luxc-handle:focus-visible {
+	outline: none;
+	stroke: var(--ink);
+	stroke-width: 4;
+}
+
+.luxc-held {
+	fill: var(--accent);
+}
+
+.luxc-caption {
+	margin: var(--space-2) 0 0;
+	font-size: var(--t-sm);
+	color: var(--ink-2);
+	line-height: 1.45;
+}
+
+/* On a phone the chart is about a third of its desktop size, and everything inside it scales with the
+   viewBox, so ten user units of type land as under six real pixels.
+
+   These were fixed user-unit bumps keyed to the viewport. Same idiom as the daylight chart now, keyed to the
+   chart instead of the window, so a narrow chart in a wide sidebar behaves too.
+
+   The targets are pixel sizes, not the user-unit numbers above: this plot is 1013 px wide at a 1280 px window,
+   so 10 units were already rendering at 16.3. Taking the stylesheet figure would have shrunk it by a third. */
+@supports (font-size: calc(tan(atan2(1px, 1px)) * 1px)) {
+	@container luxcurve (min-width: 1px) {
+		.luxc-axis,
+		.luxc-now-label {
+			font-size: min(calc(var(--chart-unit) * 16.3px), 20px);
+		}
+
+		.luxc-decade {
+			font-size: min(calc(var(--chart-unit) * 14.7px), 18px);
+		}
+	}
+}
+
+/* Constant-size type does not buy back the room between decades, so the thinning above and the decade drop
+   below both stay, and stay keyed to the viewport: they are the fallback for a browser that skipped the block
+   above, and a phone is narrow on both measures anyway. */
+@media (max-width: 560px) {
+	.luxc-decade {
+		display: none;
+	}
+
+	/* Geometry properties, so a handle that is a fair mark at full size is still one at a third of it. What a
+	   finger actually hits is .luxc-surface, which is the plot and a margin around it. */
+	.luxc-handle {
+		r: 12;
+		stroke-width: 3.5;
+	}
+
+	/* Both the mark and the type grow here, and LuxCurve.LuxLabelDrop is set against the full-width sizes. The
+	   readings drop into the room the decade words just gave up, so a handle resting on the 0 % line clears
+	   them. Lengths inside an SVG are user units, so this is 12 of LuxCurve's, not 12 device pixels. */
+	.luxc-lux {
+		transform: translateY(12px);
+	}
+
+	/* The resting ring is 3.5 here, so 4 would barely read as focus. */
+	.luxc-handle:focus-visible {
+		stroke-width: 5.5;
+	}
+}
+
+/* The house name is free text, so it is an input wearing the token's clothes, not a token: same fill,
+   same radius, same mono face, and the same brass on focus that means "you can change this". */
+.tok-text {
+	width: 9rem;
+	max-width: 40vw;
+	cursor: text;
+	white-space: normal;
+}
+
+.tok-text:focus {
+	outline: none;
+	border-color: var(--accent);
+	color: var(--accent);
+}
+
+@media (max-width: 560px) {
+	.tok-text {
+		max-width: 60vw;
+	}
+}
+
+/* Tying the schedule to a Home Assistant dropdown. Everything here lives inside a GroupFold, so the block
+   owns no background of its own: .field already carries the row rhythm the rest of the settings page uses,
+   and a second surface inside the fold would read as a box nobody put there. */
+
+.periodselect {
+	display: flex;
+	flex-direction: column;
+}
+
+/* The two directions, side by side. A row, not a stack, because the whole point of the control is that
+   they are alternatives to each other and reading them as a list invites ticking both. */
+.periodselect-authority {
+	display: inline-flex;
+	gap: 0.15rem 1.1rem;
+	flex-wrap: wrap;
+}
+
+.periodselect-choice {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	white-space: nowrap;
+	color: var(--ink);
+}
+
+/* A notice inside a fold: the fold's body already insets it, so the default bottom margin would stack a gap
+   under it that nothing sits in. Column, because each of these is a sentence, its consequence, and sometimes
+   a button, and the three read as a block, not a paragraph. */
+.periodselect-warning {
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+	margin: 0.6rem 0 0;
+}
+
+.periodselect-warning .panel-actions {
+	margin-top: 0.25rem;
+}
+
+.periodselect-rows {
+	display: flex;
+	flex-direction: column;
+	gap: 0.45rem;
+	margin-top: 0.8rem;
+}
+
+/* One live option, one period. A grid, not a spread row: with space-between, a 22rem select and a
+   six-character option string sat a third of a screen apart and the eye had to cross the gap once per row to
+   find out what it was reading. Two columns put the answer next to the question and line the dropdowns up. */
+.periodselect-row {
+	display: grid;
+	grid-template-columns: minmax(6rem, 13rem) minmax(0, 22rem);
+	align-items: center;
+	gap: 0.3rem 1rem;
+}
+
+.periodselect-row select {
+	width: 100%;
+}
+
+/* Stacked on a phone, where 13rem + 22rem cannot both fit and the option strings are whatever somebody typed
+   into a helper, so their width is not something this page gets to assume. */
+@media (max-width: 560px) {
+	.periodselect-row {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+.periodselect-option {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	flex-wrap: wrap;
+	min-width: 0;
+}
+
+/* The rename cases, held apart from the live rows by a rule, not by a heading: they are the same kind
+   of row, and what makes them different is that Home Assistant no longer offers them, which each row's own
+   badge already says. */
+.periodselect-orphans {
+	display: flex;
+	flex-direction: column;
+	gap: 0.45rem;
+	margin-top: 0.8rem;
+	padding-top: 0.7rem;
+	border-top: 1px solid var(--line);
+}
+
+.periodselect-orphan {
+	display: flex;
+	align-items: center;
+	gap: 0.4rem 0.7rem;
+	flex-wrap: wrap;
+}
+
+.periodselect-orphan-text {
+	color: var(--ink-2);
+	font-size: var(--t-sm);
+	min-width: 0;
+}
+
+/* The schedule editor's one line when Home Assistant owns the time of day. A notice, not a badge,
+   because it is about every Start field below it, not about one of them, and it has to survive being read
+   at a glance by somebody who is about to edit a control that does nothing. */
+.period-authority {
+	margin-bottom: 0.9rem;
+}
+
+/* What a control that is switched off but still editable looks like. Muted and small, because it sits under a
+   field somebody may still want to fill in for later. Greying the control itself would read as disabled, and
+   the setting is kept, not refused. */
+.mode-dormant {
+	display: block;
+	margin-top: 0.35rem;
+	color: var(--ink-2);
+	font-size: var(--t-sm);
+	font-style: italic;
+}
+
+/* The room's one warmth question, above the periods, not inside each of them: it is a fact about
+   the fixtures, and four copies of it would read as four separate decisions. */
+.lvl-warmth {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 0.4rem 0.7rem;
+	padding: 0.7rem 1.15rem;
+	border-top: var(--rule-inner);
+}
+
+.lvl-warmth-lab {
+	font-size: var(--t-xs);
+	letter-spacing: var(--label-track);
+	text-transform: uppercase;
+	color: var(--ink-2);
+}
+
+/* Wraps to its own line under 30rem or so instead of squeezing the dropdown: the sentence is the whole
+   explanation of why the warmth column below has gone. */
+.lvl-warmth-note {
+	flex: 1 1 18rem;
+	min-width: 0;
+	font-size: var(--t-sm);
+	color: var(--ink-2);
+}
+
+/* Two columns once the warmth cell is gone. Left at three, the brightness control sits at a third of the
+   row with an empty half beside it, which reads as a control that failed to render. */
+@media (min-width: 780px) {
+	.lvl-nocolour {
+		grid-template-columns: minmax(8rem, 0.85fr) minmax(11rem, 1fr) auto;
+	}
+
+	/* The mirror of .lvl-nocolour, for a fixture that answers with no brightness of its own. The room page
+	   hides the whole card once neither is left, so both classes together are not reached from there, but the
+	   column math has to hold on its own regardless of what hides the fold. */
+	.lvl-nobrightness {
+		grid-template-columns: minmax(8rem, 0.85fr) minmax(11rem, 1fr) auto;
+	}
+
+	.lvl-nocolour.lvl-nobrightness {
+		grid-template-columns: minmax(8rem, 0.85fr) auto;
+	}
+}
+
+/* The room list spans the whole period grid: the chips and the add row need more than one 230px column, and a
+   picker that wraps inside one reads as a broken control. */
+.period-motion-rooms {
+	grid-column: 1 / -1;
+}
+
+.period-motion-rooms .list-picker {
+	width: 100%;
+}
+
+/* The label around the box only, so the (i) beside it can stay outside the label. Inherits the weight, size
+   and colour of the .pfield-label it sits in. */
+.pfield-check {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	cursor: pointer;
+}
+
+/* The period grid has no help styling of its own; this matches .field-help, one step smaller for the card. */
+.pfield-help {
+	color: var(--ink-2);
+	font-size: 0.78rem;
+	max-width: 60rem;
+}
+
+/* ==============================================================================================
+   PER-LIGHT LEVELS
+   One line at the foot of the room's period table, and the light list it opens. Closed, the whole
+   feature costs a room one line; open, one line per thing the engine commands.
+   ============================================================================================== */
+
+.llv {
+	border-top: var(--rule-inner);
+	padding: 0.6rem 1.15rem 0.75rem;
+}
+
+/* Reads as a question about the table above it, so it sits on the table's own left edge and carries no box of
+   its own. The label is the whole control: a checkbox with its wording elsewhere is a smaller target. */
+.llv-toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	font-size: var(--t-sm);
+	color: var(--ink-2);
+	cursor: pointer;
+}
+
+.llv-toggle input {
+	margin: 0;
+	accent-color: var(--accent);
+}
+
+.llv-list {
+	margin-top: 0.6rem;
+}
+
+.llv-entry {
+	border: 1px solid var(--line);
+	border-radius: var(--radius-control);
+	margin-bottom: 0.4rem;
+	background: var(--surface);
+}
+
+/* Name, summary and chevron on one line. min-width: 0 on the name, or a long friendly name pushes the
+   summary off the row instead of ellipsing. */
+.llv-head {
+	display: flex;
+	align-items: center;
+	gap: var(--space-3);
+	padding: 0.5rem 0.75rem;
+	cursor: pointer;
+	list-style: none;
+}
+
+.llv-head::-webkit-details-marker {
+	display: none;
+}
+
+.llv-entry[open] > .llv-head {
+	border-bottom: 1px solid var(--line);
+	background: var(--surface-2);
+}
+
+.llv-name {
+	font-weight: 600;
+	font-size: var(--t-md);
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.llv-says {
+	flex: 1 1 8rem;
+	min-width: 0;
+	color: var(--ink-2);
+	font-size: var(--t-sm);
+}
+
+.llv-head .area-chevron {
+	align-self: center;
+	margin-left: auto;
+}
+
+.llv-entry[open] > .llv-head .area-chevron {
+	transform: rotate(45deg);
+}
+
+/* Flush: the period rows inside carry their own padding, and a second inset would step every light in from
+   its own name. */
+.llv-body {
+	padding: 0;
+}
+
+/* A light inside a group. Indented once and once only: nested groups are flattened into this same flat
+   list, so there is never a second level to pay for. */
+.llv-leaf {
+	border: 0;
+	border-top: var(--rule-inner);
+	border-radius: 0;
+	margin: 0;
+	background: none;
+}
+
+.llv-leaf[open] > .llv-head {
+	background: none;
+}
+
+/* The first row already draws a rule under the fold's own head. */
+.llv-table > .lvl:first-child {
+	border-top: 0;
+}
+
+/* No longer commanded here: kept because a bulb out of a group is nearly always a change in progress, and
+   shown because kept silently it springs back the day the bulb returns. */
+.llv-orphan {
+	background: var(--warn-bg);
+	border-color: color-mix(in srgb, var(--warn) 45%, var(--line));
+}
+
+.llv-orphan .llv-head {
+	cursor: default;
+}
+
+.llv-orphan .llv-says {
+	color: var(--warn);
+}
+
+.llv-orphan .lvl-drop {
+	margin-left: auto;
+}
+
+/* The control on a group's own line, above the lights it writes to. */
+.llv-group-lede {
+	margin: 0;
+	padding: 0.5rem 1.15rem 0;
+	font-size: var(--t-sm);
+	color: var(--ink-2);
+}
+
+.llv-group-table {
+	border-bottom: var(--rule-inner);
+}
+
+/* The lights disagree, so the readout says so instead of showing the first light's number as the group's. */
+.psl-mixed {
+	color: var(--ink-2);
+	font-style: italic;
+}
+
+/* Holds the Test column in a group's rows so the rails line up with the lights' below; gone where rows stack. */
+.lvl-act-none {
+	display: none;
+}
+
+@media (min-width: 780px) {
+	.lvl-act-none {
+		display: block;
+		min-width: 6.6rem;
+	}
+}
+
+/* ---- the order a room sits in its floor ---- */
+
+/* Two quiet arrows per room. They sit at the tail of a row both designs already build, so they take a fixed
+   size and no colour of their own until pointed at. */
+.roword {
+	display: flex;
+	flex: 0 0 auto;
+	gap: 0.15rem;
+	align-items: center;
+}
+
+.roword-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.5rem;
+	height: 1.5rem;
+	padding: 0;
+	background: none;
+	border: var(--rule, 1px solid var(--line));
+	border-radius: var(--radius-control);
+	color: var(--ink-2);
+	cursor: pointer;
+}
+
+.roword-btn svg {
+	width: 14px;
+	height: 14px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+.roword-btn:hover:not(:disabled) {
+	color: var(--accent);
+	border-color: var(--accent);
+}
+
+.roword-btn:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
+/* The end of a floor: the press would do nothing, so it is refused rather than drawn as available. */
+.roword-btn:disabled {
+	opacity: 0.35;
+	cursor: default;
+}

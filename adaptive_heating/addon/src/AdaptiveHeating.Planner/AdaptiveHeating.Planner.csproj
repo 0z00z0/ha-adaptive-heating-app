@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>AdaptiveHeating.Planner</RootNamespace>
+    <Description>The heating planner's core: precedence, warm-up arithmetic, the learnt numbers, the per-room sensor check and the record of what is in force. No Home Assistant type appears in any signature.</Description>
+  </PropertyGroup>
+
+</Project>

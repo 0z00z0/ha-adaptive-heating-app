@@ -1,0 +1,78 @@
+@* Controlled, the same way Pair is: the page tracks which one row in a group is being edited and passes
+   IsEditing back down, so only one opens at a time without this component knowing about its siblings.
+   A wide or per-room row never toggles — its control is always shown — so it gets no click handler at all. *@
+
+<div class="@CssClass" @onclick="ToggleEdit">
+	<div class="row-label">
+		<span>@Label</span>
+		<Info Label="@Label" Severity="@Severity">@Help</Info>
+	</div>
+
+	<div class="row-value">@Value</div>
+
+	@* stopPropagation: a click on the control itself must never also toggle editing. *@
+	<div class="row-ctl" @onclick:stopPropagation="true">@ChildContent</div>
+
+	@if (IsOwn && HouseText is { Length: > 0 } house)
+	{
+		<button type="button" class="row-revert" @onclick="Revert" @onclick:stopPropagation="true">Use house: @house</button>
+	}
+</div>
+
+@code {
+	[Parameter, EditorRequired]
+	public string Label { get; set; } = "";
+
+	/// <summary>The help text for the (i) popover; null gives the row no (i).</summary>
+	[Parameter]
+	public RenderFragment? Help { get; set; }
+
+	[Parameter]
+	public InfoSeverity Severity { get; set; }
+
+	/// <summary>The value shown large, above the control — plain text, never markup.</summary>
+	[Parameter, EditorRequired]
+	public string Value { get; set; } = "";
+
+	/// <summary>Whether this room states its own value instead of following the house.</summary>
+	[Parameter]
+	public bool IsOwn { get; set; }
+
+	/// <summary>The house's value, already written; the revert button shows only when this and IsOwn are both set.</summary>
+	[Parameter]
+	public string? HouseText { get; set; }
+
+	/// <summary>Spans every column; its control is always shown, never folded behind a click.</summary>
+	[Parameter]
+	public bool IsWide { get; set; }
+
+	/// <summary>Only a room can set this value; the house page shows a room count instead of a control.</summary>
+	[Parameter]
+	public bool IsPer { get; set; }
+
+	[Parameter]
+	public bool IsEditing { get; set; }
+
+	/// <summary>Raised on a click that lands on the row itself, never on its control or its revert button.</summary>
+	[Parameter]
+	public EventCallback OnToggleEdit { get; set; }
+
+	// The handler clears the room's own value rather than copying HouseText's number in, so the room keeps
+	// following the house when the house's value later changes. That rule lives with the page, not here.
+	[Parameter]
+	public EventCallback OnRevert { get; set; }
+
+	/// <summary>The control shown in row-ctl.</summary>
+	[Parameter, EditorRequired]
+	public RenderFragment? ChildContent { get; set; }
+
+	// A wide or per-room row's control is always shown, so a click on its background does nothing.
+	private Task ToggleEdit() => IsWide || IsPer ? Task.CompletedTask : OnToggleEdit.InvokeAsync();
+
+	private Task Revert() => OnRevert.InvokeAsync();
+
+	// A single expression, not several adjacent @(...) in the markup: Razor's attribute-value parser
+	// mishandles back-to-back explicit expressions with no literal text between them.
+	private string CssClass =>
+		$"row{(IsOwn ? " own" : "")}{(IsWide ? " wide" : "")}{(IsPer ? " per" : "")}{(IsEditing ? " editing" : "")}";
+}

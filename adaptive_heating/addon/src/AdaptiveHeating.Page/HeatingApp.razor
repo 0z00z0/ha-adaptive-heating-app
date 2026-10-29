@@ -1,0 +1,41 @@
+@using System.Globalization
+<!DOCTYPE html>
+<html lang="@CultureInfo.CurrentUICulture.Name">
+
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	@* Home Assistant's ingress strips a per-installation prefix and names it in a header, so this is read per
+		request and never configured. Without the header it is "/" and nothing about the page changes. *@
+	<base href="@IngressBasePath.For(HttpContext)" />
+	<title>@Words["PageTitle"]</title>
+	@* Lighting's two sheets first, unchanged, so heating's colours and icons win a tie. *@
+	<link rel="stylesheet" href="@($"_content/AdaptiveHeating.Page/controls.css?v={AssetToken.Text}")" />
+	<link rel="stylesheet" href="@($"_content/AdaptiveHeating.Page/lamplight.css?v={AssetToken.Text}")" />
+	<link rel="stylesheet" href="@($"_content/AdaptiveHeating.Page/heating.css?v={AssetToken.Text}")" />
+	@* Blocking and above the body, after the stylesheet: the server paints this page, so a theme applied after
+		render arrives a repaint late. data-themes is the allow-list; an id outside it, or nothing stored, falls
+		back to the device's own default named by data-dark/data-light. *@
+	<script src="@($"_content/AdaptiveHeating.Page/heating-theme.js?v={AssetToken.Text}")"
+		data-themes="@HeatingThemes.DataThemeIds" data-dark="@HeatingThemes.DarkDefault.Id"
+		data-light="@HeatingThemes.LightDefault.Id"></script>
+	@* Closes an open help bubble on an outside click; deferred, nothing inline. *@
+	<script defer src="@($"_content/AdaptiveHeating.Page/lamplight-info.js?v={AssetToken.Text}")"></script>
+	<HeadOutlet @rendermode="InteractiveServer" />
+</head>
+
+<body>
+	<HeatingRoutes @rendermode="InteractiveServer" />
+	<script src="@($"_content/AdaptiveHeating.Page/preset-slider.js?v={AssetToken.Text}")"></script>
+	<script src="_framework/blazor.web.js"></script>
+</body>
+
+</html>
+
+@code {
+	[CascadingParameter]
+	private HttpContext? HttpContext { get; set; }
+
+	[Inject]
+	private IStringLocalizer<AdaptiveHeating.Page.Resources.PageStrings> Words { get; set; } = default!;
+}

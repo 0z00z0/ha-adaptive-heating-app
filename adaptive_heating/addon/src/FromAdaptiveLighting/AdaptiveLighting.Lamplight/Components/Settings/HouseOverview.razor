@@ -1,0 +1,359 @@
+@namespace Adaptive.UI
+@* Lamplight's "House" tab: the folds that hold the house's own settings, and the tail "House only". *@
+@using System.Globalization
+@using AdaptiveLighting.Configuration
+@using AdaptiveLighting.Engine
+@using AdaptiveLighting.Lamplight.Components.Kit
+@using AdaptiveLighting.Web.Components
+
+<SectionIndex Items="@IndexItems" OnJump="@Jump" />
+
+<SettingsGroupFold Id="defaults" Model="@Model" Open="@IsOpen("defaults")" OpenChanged="@(open => SetOpen("defaults", open))" />
+
+<Fold Id="sensors" Title="Heaters and sensors" Summary="@SensorsSummary" BangKind="@(Model.SharedLights.Count > 0 ? "warn" : null)" BangTitle="@Model.SharedLightsHeadline" Open="@IsOpen("sensors")" OpenChanged="@(open => SetOpen("sensors", open))">
+	@if (Model.SharedLights.Count > 0)
+	{
+		<ul class="warns">
+			<li class="warn-i warn">
+				<span>@Model.SharedLightsHeadline</span>
+				<Info Label="Shared heaters" Severity="InfoSeverity.Warn">@SharedLightsHelp</Info>
+			</li>
+		</ul>
+	}
+
+	<div class="rows">
+		<Row Label="Only manage heaters with (label)" Value="@Model.LabelText(Model.IncludeLabel)" IsWide="true">
+			<Help>Set it and every heater without this label stops being managed, in every room. Heaters named by hand in a room are managed either way.</Help>
+			<ChildContent>
+				<LabelPicker Value="@Model.IncludeLabel" ValueChanged="@Model.SetIncludeLabel" Options="@Model.LabelOptions" NoneLabel="(none — manage every heater that's found)" Placeholder="heating" />
+			</ChildContent>
+		</Row>
+		<Row Label="Never touch (label)" Value="@Model.LabelText(Model.ExcludeLabel)" IsWide="true">
+			<Help>Anything carrying this label is never discovered, commanded or counted.</Help>
+			<ChildContent>
+				<LabelPicker Value="@Model.ExcludeLabel" ValueChanged="@Model.SetExcludeLabel" Options="@Model.LabelOptions" NoneLabel="(none — nothing is excluded)" Placeholder="adaptive_exclude" />
+			</ChildContent>
+		</Row>
+		<Row Label="Outdoor temperature sensor" Value="@(Model.OutdoorSensor ?? "none")" IsWide="true">
+			<Help>Where the house reads the temperature outside. One sensor for the whole house.</Help>
+			<ChildContent>
+				<EntityPicker Value="@Model.OutdoorSensor" ValueChanged="@Model.SetOutdoorSensor" Options="@Model.OutdoorSensors" NoneLabel="(none)" EmptyNote="@Model.EmptyNote("No temperature sensors — type an id")" Placeholder="sensor.outdoor_temperature" Lookup="@Model.Lookup" />
+			</ChildContent>
+		</Row>
+		<Row Label="Weather forecast" Value="@(Model.ForecastEntity ?? "none")" IsWide="true">
+			<Help>Stands in when the outdoor sensor is silent, and plans a warm-up ahead.</Help>
+			<ChildContent>
+				<EntityPicker Value="@Model.ForecastEntity" ValueChanged="@Model.SetForecastEntity" Options="@Model.Forecasts" NoneLabel="(none)" EmptyNote="@Model.EmptyNote("No weather entities — type an id")" Placeholder="weather.home" Lookup="@Model.Lookup" />
+			</ChildContent>
+		</Row>
+		<Row Label="Plan a warm-up on" Value="@WarmUpSourceText" IsEditing="@(_editingRow == "warm-up")" OnToggleEdit="@(() => ToggleRow("warm-up"))">
+			<Help>The forecast plans ahead. The outdoor sensor reads only what it is now.</Help>
+			<ChildContent>
+				<select class="cell" aria-label="Plan a warm-up on" @bind:get="Model.WarmUpSourceValue" @bind:set="Model.SetWarmUpSource">
+					<option value="@nameof(WarmUpSource.Forecast)">the forecast</option>
+					<option value="@nameof(WarmUpSource.OutdoorMeasurement)">the outdoor sensor</option>
+				</select>
+			</ChildContent>
+		</Row>
+		<Row Label="Ignore the outdoor sensor after" Value="@StaleText" IsEditing="@(_editingRow == "stale")" OnToggleEdit="@(() => ToggleRow("stale"))">
+			<Help>A sensor silent for longer than this is left out, and the forecast stands in. 0 switches the rule off.</Help>
+			<ChildContent><Stepper Value="@Model.OutdoorSensorStaleAfterMinutes" Text="@StaleText" Label="Ignore the outdoor sensor after" Step="15" Min="0" ValueChanged="@(value => Model.OutdoorSensorStaleAfterMinutes = (int)value)" /></ChildContent>
+		</Row>
+		<Row Label="Sun entity" Value="@Model.SunEntity" IsWide="true">
+			<Help>Where the house reads sunrise and sunset, for every sun-anchored schedule boundary. A house has exactly one, so no room overrides it.</Help>
+			<ChildContent>
+				<EntityPicker Value="@Model.SunEntity" ValueChanged="@Model.SetSunEntity" Options="@Model.SunEntities" NoneLabel="(none — the engine needs one)" EmptyNote="@Model.EmptyNote("No sun entity — type an id")" Placeholder="sun.sun" />
+			</ChildContent>
+		</Row>
+	</div>
+</Fold>
+
+<div class="tail-lab">House only</div>
+
+<Fold Id="people" Title="People" Summary="@PeopleSummary" Open="@IsOpen("people")" OpenChanged="@(open => SetOpen("people", open))">
+	<SentenceView Sentences="@Model.AwaySentence" Edited="@Model.OnGlobalEdited" Note="@HousePageModel.TokenNote" ShowLegend="false" />
+	<div class="rows">
+		<Row Label="Who lives here" Value="@(Model.Persons.Count == 0 ? "Everyone" : $"{Model.Persons.Count} named")" IsWide="true">
+			<Help>Whose phones are watched, so the dashboard can show who is home. Empty means everyone Home Assistant knows. Nobody's phone changes a temperature: the house mode decides.</Help>
+			<ChildContent>
+				<EntityListPicker Value="@Model.Persons" ValueChanged="@Model.SetPersons" Options="@Model.PersonOptions" Lookup="@Model.Lookup" EmptyLabel="Empty — everyone" AddLabel="Watch someone…" EmptyNote="@Model.EmptyNote("No people — type an id")" Placeholder="person.example" />
+			</ChildContent>
+		</Row>
+	</div>
+</Fold>
+
+<Fold Id="master" Title="Master switch" Summary="@MasterSummary" Open="@IsOpen("master")" OpenChanged="@(open => SetOpen("master", open))">
+	<div class="rows">
+		<Row Label="Adaptive Heating" Value="@MasterValue" IsWide="true" Severity="@Model.MasterNoteSeverity">
+			<Help>@MasterHelp</Help>
+			<ChildContent>
+				@if (Model.MasterSwitch is { IsAvailable: true } master)
+				{
+					<button type="button"
+							class="toggle @(master.AdaptiveLightingOn ? "on" : null)"
+							role="switch"
+							aria-checked="@(master.AdaptiveLightingOn ? "true" : "false")"
+							aria-label="Adaptive Heating for the whole house"
+							disabled="@(!master.Toggle.CanToggle)"
+							title="@Model.MasterTitle"
+							@onclick="Model.ToggleMaster">
+						<span class="knob"></span>
+					</button>
+				}
+				else
+				{
+					<Chip Kind="idle" Word="unknown" />
+				}
+			</ChildContent>
+		</Row>
+		<Row Label="Which switch" Value="@(Model.EffectiveKillSwitchEntity ?? "not connected yet")" IsWide="true">
+			<Help>Which Home Assistant switch pauses everything. Left unset it uses this add-on's own switch.</Help>
+			<ChildContent>
+				<EntityPicker Value="@Model.KillSwitchEntity" ValueChanged="@Model.SetKillSwitchEntity" Options="@Model.Switches" NoneLabel="(default — this add-on's own enable switch)" EmptyNote="@Model.EmptyNote("No switches — type an id")" Placeholder="input_boolean.adaptive_heating" />
+			</ChildContent>
+		</Row>
+		@if (!Model.UsesBuiltInKillSwitch)
+		{
+			<Row Label="Which way round it reads" Value="@(Model.KillSwitchPolarityValue == "true" ? "on lets rooms heat" : "off lets rooms heat")" IsWide="true">
+				<ChildContent>
+					<select class="cell wide" @bind:get="Model.KillSwitchPolarityValue" @bind:set="Model.SetKillSwitchPolarity">
+						<option value="true">on lets rooms heat, off pauses everything</option>
+						<option value="false">off lets rooms heat, on pauses everything</option>
+					</select>
+				</ChildContent>
+			</Row>
+		}
+	</div>
+</Fold>
+
+<Fold Id="tuning" Title="Fine tuning" Summary="@($"{Model.PassCadenceSeconds} s · {Model.SelfEchoWindowSeconds} s")" Open="@IsOpen("tuning")" OpenChanged="@(open => SetOpen("tuning", open))">
+	<div class="rows">
+		<Row Label="Re-check the rooms every" Value="@($"{Model.PassCadenceSeconds} s")" IsEditing="@(_editingRow == "re-check")" OnToggleEdit="@(() => ToggleRow("re-check"))">
+			<Help>How often each room re-reads the time of day and the temperatures. 60 is plenty.</Help>
+			<ChildContent><Stepper Value="@Model.PassCadenceSeconds" Text="@($"{Model.PassCadenceSeconds} s")" Label="Re-check the rooms every" Step="5" Min="1" ValueChanged="@(value => Model.PassCadenceSeconds = (int)value)" /></ChildContent>
+		</Row>
+		<Row Label="Recognise own changes for" Value="@($"{Model.SelfEchoWindowSeconds} s")" IsEditing="@(_editingRow == "own-changes")" OnToggleEdit="@(() => ToggleRow("own-changes"))">
+			<Help>A thermostat that changes within this many seconds of one of the add-on's own commands is read as its echo, not as somebody at the thermostat. 8 s suits most houses.</Help>
+			<ChildContent><Stepper Value="@Model.SelfEchoWindowSeconds" Text="@($"{Model.SelfEchoWindowSeconds} s")" Label="Recognise own changes for" Step="1" Min="0" ValueChanged="@(value => Model.SelfEchoWindowSeconds = (int)value)" /></ChildContent>
+		</Row>
+		<Row Label="Other automations count as manual changes" Value="@(Model.TreatAutomationsAsManual ? "Yes" : "No")" IsEditing="@(_editingRow == "automations-manual")" OnToggleEdit="@(() => ToggleRow("automations-manual"))">
+			<Help>Ticked, a temperature another automation sets is treated as a manual change.</Help>
+			<ChildContent>
+				<button type="button" class="toggle @(Model.TreatAutomationsAsManual ? "on" : null)" role="switch" aria-checked="@(Model.TreatAutomationsAsManual ? "true" : "false")" aria-label="Other automations count as manual changes" @onclick="() => Model.TreatAutomationsAsManual = !Model.TreatAutomationsAsManual">
+					<span class="knob"></span>
+				</button>
+			</ChildContent>
+		</Row>
+	</div>
+</Fold>
+
+<Fold Id="logging" Title="Logging" Summary="@LoggingSummary" Open="@IsOpen("logging")" OpenChanged="@(open => SetOpen("logging", open))">
+	<div class="rows">
+		<Row Label="Log level" Value="@Model.LogLevelText" IsEditing="@(_editingRow == "log-level")" OnToggleEdit="@(() => ToggleRow("log-level"))">
+			<Help>Takes effect while the add-on runs, without a restart.</Help>
+			<ChildContent>
+				<select class="cell" disabled="@(!Model.CanSetLogLevel)" aria-label="Log level" @bind:get="Model.LogLevelValue" @bind:set="SetLogLevel">
+					<option value="">As the host sets it</option>
+					@foreach (string level in HousePageModel.LogLevels)
+					{
+						<option value="@level">@level</option>
+					}
+				</select>
+			</ChildContent>
+		</Row>
+		<Row Label="Log every thermostat command" Value="@(Model.CommandLog ? "On" : "Off")" IsEditing="@(_editingRow == "command-log")" OnToggleEdit="@(() => ToggleRow("command-log"))">
+			<Help>One file per thermostat, in log/commands beside the settings file. The files grow until this is switched off, and nothing deletes them.</Help>
+			<ChildContent>
+				<button type="button" class="toggle @(Model.CommandLog ? "on" : null)" role="switch" aria-checked="@(Model.CommandLog ? "true" : "false")" aria-label="Log every thermostat command" @onclick="() => Model.CommandLog = !Model.CommandLog">
+					<span class="knob"></span>
+				</button>
+			</ChildContent>
+		</Row>
+	</div>
+</Fold>
+
+<Fold Id="install" Title="This house" Summary="@Model.RoomsManagedLine" Open="@IsOpen("install")" OpenChanged="@(open => SetOpen("install", open))">
+	<div class="rows">
+		<Row Label="House name" Value="@(Model.HouseName ?? "Adaptive Heating")" IsWide="true">
+			<Help>A label for logs and notifications, so two houses can be told apart.</Help>
+			<ChildContent><input class="cell wide" value="@Model.HouseName" placeholder="Adaptive Heating" @onchange="args => Model.HouseName = args.Value as string" /></ChildContent>
+		</Row>
+		<Row Label="Embed in a dashboard" Value="@Model.EmbedFromValue" IsWide="true">
+			<Help>Home Assistant's own address, so a dashboard card can show this page in a frame. Empty means no other site may. Home network only — a dashboard reached over https refuses a frame served over http.</Help>
+			<ChildContent>
+				<EntityListPicker Value="@Model.EmbedFrom" ValueChanged="@Model.SetEmbedFrom" EmptyLabel="Nobody" EmptyNote="" Placeholder="http://10.0.0.5:8123" />
+			</ChildContent>
+		</Row>
+	</div>
+	<dl class="facts">
+		<dt>Engine</dt><dd>@(Model.EngineIsRunning ? "running · " + Model.RoomsManagedLine : "not running · " + Model.EngineFault)</dd>
+		<dt>File</dt><dd>@Model.ConfigFilePath@(Model.LocationDescription is { } where ? " · " + where : "")</dd>
+		<dt>Home Assistant</dt><dd>@(Model.HomeAssistantIsAnswering ? "connected · " + Model.AreasKnownLine : "not connected")</dd>
+	</dl>
+</Fold>
+
+<Fold Id="rooms" Title="Rooms" Summary="@RoomsSummary" Count="@Model.Areas.Count" Open="@IsOpen("rooms")" OpenChanged="@(open => SetOpen("rooms", open))">
+	<div class="panel-actions">
+		<button type="button" @onclick="Model.ToggleAddRoom">@(Model.AddingRoom ? "Cancel" : "Add a room")</button>
+		<button type="button" @onclick="Model.ReloadFromHomeAssistant" disabled="@(!Model.CanReloadFromHomeAssistant)">Reload from Home Assistant</button>
+		<Info Label="Reload from Home Assistant">
+			Rebuilds every room's heaters and sensors from what Home Assistant reports right now, the same rebuild a
+			save or a restart already does. Refused while an edit here sits unsaved, since it rebuilds from the
+			file on disk and not from what is on screen.
+		</Info>
+		@* The first design's rooms section places this beside the add button; Lamplight carries no such control. *@
+		<button type="button" @onclick="Model.OpenSetupForEveryRoom" disabled="@(!Model.CanSetUpAgain)">Set up again</button>
+	</div>
+
+	@if (Model.ReloadOutcome is { Length: > 0 } reloadOutcome)
+	{
+		<p class="hint">@reloadOutcome</p>
+	}
+
+	@if (Model.AddingRoom)
+	{
+		<div class="rows one">
+			<Row Label="Which room?" Value="@(Model.AddAreaId ?? "pick one")" IsWide="true">
+				<ChildContent><AreaPicker Value="@Model.AddAreaId" ValueChanged="@Model.AddRoom" Areas="@Model.AddableAreas" NoneLabel="(pick a room)" EmptyNote="@Model.AddEmptyNote" /></ChildContent>
+			</Row>
+		</div>
+	}
+
+	@if (Model.SetupScope is { } setupScope)
+	{
+		<SetupAgainPanel Config="@Model.Config"
+						 PreTicked="@setupScope"
+						 PlanFor="@Model.PlanSetup"
+						 NameOf="@Model.AreaName"
+						 Confirmed="@Model.ApplySetup"
+						 Cancelled="@Model.CloseSetup" />
+	}
+
+	@if (Model.SetupNote is { Length: > 0 } setupNote)
+	{
+		<p class="hint ok">@setupNote</p>
+	}
+
+	<div class="areas">
+		@foreach (FloorGroup<AreaConfig> floor in Model.AreaGroups)
+		{
+			FloorGroup<AreaConfig> current = floor;
+
+			@if (Model.ShowsFloorHeader(current))
+			{
+				<div class="floor-row">@HousePageModel.FloorTitle(current) <button type="button" class="add" @onclick="() => Model.SwitchFloor(current)">@Model.FloorAction(current)</button></div>
+			}
+
+			@foreach (AreaConfig area in current.Items)
+			{
+				AreaConfig room = area;
+				bool enabled = Model.IsEnabled(room);
+
+				<div class="area @(enabled ? "" : "off")">
+					<button type="button" class="toggle @(enabled ? "on" : null)" role="switch" aria-checked="@(enabled ? "true" : "false")" aria-label="@Model.ToggleLabel(room)" @onclick="() => Model.ToggleEnabled(room)"><span class="knob"></span></button>
+					@if (Model.RoomLink(room) is { Length: > 0 } href)
+					{
+						<a href="@href">
+							<b>@Model.RoomName(room)</b>
+							@if (Model.IsHeldByHand(room))
+							{
+								<Chip Kind="hand" Word="by hand" />
+							}
+							@if (Model.LowBatteryTitle(room) is { Length: > 0 } battery)
+							{
+								<Bang Kind="warn" Title="@battery" />
+							}
+							<span class="area-sum">@HousePageModel.RoomSummary(room)</span>
+						</a>
+					}
+					else
+					{
+						<span class="area-shut"><b>@Model.RoomName(room)</b><span class="area-sum">save to open this room</span></span>
+					}
+					@* At the tail of the row, outside the link, as the switch is outside it at the head. *@
+					<RoomOrder Model="@Model" Area="@room" />
+				</div>
+			}
+		}
+	</div>
+
+	@if (Model.HasNoRooms)
+	{
+		<div class="empty">No rooms yet</div>
+	}
+
+	@if (Model.SwitchedOffLine is { Length: > 0 } switchedOff)
+	{
+		<p class="hint">@switchedOff</p>
+	}
+</Fold>
+
+@code {
+	[Parameter, EditorRequired]
+	public HousePageModel Model { get; set; } = null!;
+
+	// Fold-open state this page tracks itself; nothing here is model state.
+	private readonly HashSet<string> _openDefault = ["sensors", "rooms"];
+	private readonly Dictionary<string, bool> _open = [];
+
+	private bool IsOpen(string id) => _open.TryGetValue(id, out bool value) ? value : _openDefault.Contains(id);
+
+	private void SetOpen(string id, bool open) => _open[id] = open;
+
+	private string MasterSummary => Model.MasterSwitch is { IsAvailable: true } master
+		? (master.AdaptiveLightingOn ? "on" : "off")
+		: Model.UsesBuiltInKillSwitch ? "this add-on's own switch" : Model.KillSwitchEntity ?? "not connected yet";
+
+	private string MasterValue => Model.MasterSwitch is { IsAvailable: true } master
+		? (master.AdaptiveLightingOn ? "On" : "Off")
+		: "Unknown";
+
+	private string MasterHelp => Model.MasterNoteMore ??
+		"On means rooms are heated automatically; off pauses everything at once — nothing is turned off, changes just stop.";
+
+	private string SensorsSummary => Model.IncludeLabel is { Length: > 0 } include
+		? Model.LabelText(include)
+		: Model.OutdoorSensor ?? "every heater found";
+
+	private string StaleText => Model.OutdoorSensorStaleAfterMinutes <= 0
+		? "never"
+		: $"{Model.OutdoorSensorStaleAfterMinutes.ToString(CultureInfo.CurrentCulture)} min";
+
+	private string WarmUpSourceText => Model.WarmUpSourceValue == nameof(WarmUpSource.OutdoorMeasurement)
+		? "the outdoor sensor"
+		: "the forecast";
+
+	private string LoggingSummary => $"{Model.LogLevelText} · {(Model.CommandLog ? "commands on" : "commands off")}";
+
+	private string RoomsSummary => $"{Model.Areas.Count(Model.IsEnabled)} of {Model.Areas.Count} on";
+
+	private string PeopleSummary => Model.Persons.Count == 0 ? "everyone" : $"{Model.Persons.Count} named";
+
+	// Id beside the name, as SwitchOnNoteView orders it: the reason ends in advice.
+	private RenderFragment SharedLightsHelp => @<text>
+		@foreach (SuspectLight shared in Model.SharedLights)
+		{
+			<span class="info-para"><strong>@shared.Name</strong> <code>@shared.EntityId</code> &mdash; @shared.Reason</span>
+		}
+	</text>;
+
+	private void SetLogLevel(string? value) => Model.LogLevelValue = value ?? "";
+
+	// The one row whose control is open, or null.
+	private string? _editingRow;
+
+	private void ToggleRow(string row) => _editingRow = _editingRow == row ? null : row;
+
+	private IReadOnlyList<SectionIndex.Item> IndexItems =>
+	[
+		new("defaults", "Every room starts with"),
+		new("sensors", "Heaters and sensors", null, Model.SharedLights.Count > 0 ? "warn" : null, Model.SharedLightsHeadline),
+		new("people", "People"),
+		new("master", "Master switch"),
+		new("tuning", "Fine tuning"),
+		new("logging", "Logging"),
+		new("install", "This house")
+	];
+
+	private void Jump(string id) => SetOpen(id, true);
+}

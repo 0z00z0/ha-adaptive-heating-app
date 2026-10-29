@@ -1,0 +1,32 @@
+@* The sticky jump row above the room and house page's folds. Opening the target fold and scrolling to it is
+   the page's job — this only reports which one was pressed. *@
+
+<nav class="d2-index" aria-label="Settings sections">
+	@foreach (Item item in Items)
+	{
+		<button type="button" @onclick="() => Jump(item.Id)">
+			@item.Title
+			@if (item.Count is { } count)
+			{
+				<span class="n">@count</span>
+			}
+			@if (item.BangKind is { Length: > 0 } bangKind)
+			{
+				<Bang Kind="@bangKind" Title="@(item.BangTitle ?? "")" />
+			}
+		</button>
+	}
+</nav>
+
+@code {
+	/// <summary>One jump target: a fold's id and title, and the same badge a Fold would show.</summary>
+	public sealed record Item(string Id, string Title, int? Count = null, string? BangKind = null, string? BangTitle = null);
+
+	[Parameter, EditorRequired]
+	public IReadOnlyList<Item> Items { get; set; } = [];
+
+	[Parameter]
+	public EventCallback<string> OnJump { get; set; }
+
+	private Task Jump(string id) => OnJump.InvokeAsync(id);
+}

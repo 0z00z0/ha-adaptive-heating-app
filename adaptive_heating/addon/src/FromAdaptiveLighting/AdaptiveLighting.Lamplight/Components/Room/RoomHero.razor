@@ -1,0 +1,119 @@
+@using AdaptiveLighting.Abstractions
+@using AdaptiveLighting.Lamplight.Components.Kit
+@using AdaptiveLighting.Web.Components
+
+@* The room page's head: the room card and the "right now" card, then the headline as prose. The card glows in
+   the colour of the room's own reading, from the temperature scale the rest of the page paints with. *@
+
+<TickRegion Clock="@Model">
+	<div class="d2-hero">
+		<LampCard Name="@Model.PageName" LampStyle="@LampStyle" Big="@Big" BigSub="@BigSub">
+			@* The room's switch, in the head where the eye starts. Switching a running room off is rare, so the
+			   identity fold carries it as well. *@
+			<Pair Name="Adaptive Heating"
+				  ShowStatus="false"
+				  Word="@(Model.IsEnabled ? "ON" : "OFF")"
+				  WordKind="@(Model.IsEnabled ? "ok" : "off")"
+				  Options="@EnableOptions"
+				  Current="@(Model.IsEnabled ? 0 : 1)"
+				  OnSelect="OnEnableSelect">
+				<Help>@Model.SwitchTitle</Help>
+			</Pair>
+		</LampCard>
+
+		<NowCard Warnings="@Warnings" Facts="@Facts" />
+	</div>
+
+	@if (!Model.IsEnabled)
+	{
+		<div class="notice">
+			<span class="info-line">
+				<strong>This room is not enabled</strong>
+				<Info Label="Not enabled">
+					Nothing below is commanded and the thermostat is left exactly as it is &mdash; the settings are kept,
+					and take effect the moment the room is enabled.
+				</Info>
+			</span>
+		</div>
+	}
+
+	@if (Model.HasReport)
+	{
+		<p class="lede">@Model.Headline <span class="since">@Model.Since</span></p>
+
+		@if (Model.NextLine is { Length: > 0 } next)
+		{
+			<p class="lede">@next</p>
+		}
+	}
+
+	@if (Model.SwitchOnNote is { } note)
+	{
+		<SwitchOnNoteView Note="@note" AdviceHref="@($"room/{Model.RequestedAreaId}#sensors")" Dismissed="@Model.DismissSwitchOnNote" />
+	}
+</TickRegion>
+
+@code {
+	[Parameter, EditorRequired]
+	public RoomPageModel Model { get; set; } = default!;
+
+	private static readonly IReadOnlyList<string> EnableOptions = ["On", "Off"];
+
+	private string? LampStyle => Model.Card?.Temperature is { } reading
+		? $"--lampc: {AdaptiveHeating.Page.Presentation.TemperatureColour.Css(reading)}; --lvl: 1"
+		: null;
+
+	// The room's reading where there is one, and what it holds beside it.
+	private string Big => Model.Card?.Temperature is { } reading ? Celsius(reading) : Model.HasReport ? "no reading" : "—";
+
+	private string BigSub => Model.Card switch
+	{
+		{ NoReadingAtAll: true, Switched: "on" } => "on",
+		{ NoReadingAtAll: true } => "off",
+		{ Target: { } target } => $"holding {Celsius(target)}",
+		_ => ""
+	};
+
+	private static string Celsius(double value) => $"{value.ToString("0.#", System.Globalization.CultureInfo.CurrentCulture)} °C";
+
+	private IReadOnlyList<NowCard.Warning> Warnings
+	{
+		get
+		{
+			List<NowCard.Warning> warnings = [];
+
+			if (Model.NotResponding is { Length: > 0 } notResponding)
+				warnings.Add(new NowCard.Warning("not-responding", "warn", notResponding, NotRespondingHelp));
+
+			if (Model.Fault is { Length: > 0 } fault)
+				warnings.Add(new NowCard.Warning("fault", "bad", fault, FaultHelp));
+
+			// The sentences come from the readings in the same order.
+			foreach ((string battery, SensorBattery sensor) in Model.LowBatteries.Zip(Model.LowBatteryReadings))
+				warnings.Add(new NowCard.Warning($"battery-{sensor.SensorId}", "warn", battery, BatteryHelp));
+
+			foreach (SensorWarning sensor in Model.SensorWarnings)
+				warnings.Add(new NowCard.Warning($"sensor-{sensor.Kind}", "warn", sensor.Text, SensorHelp(sensor)));
+
+			return warnings;
+		}
+	}
+
+	private static RenderFragment SensorHelp(SensorWarning sensor) =>
+		builder => builder.AddContent(0, $"{string.Join(", ", sensor.Names)}. {sensor.Advice}");
+
+	private static readonly RenderFragment NotRespondingHelp = @<text>
+		The room runs on the heaters that still answer, so one that dropped out while it was on may still be on.
+	</text>;
+
+	private static readonly RenderFragment FaultHelp = @<text>The room's power meter disagrees with what its relay is told. Check the heater.</text>;
+
+	private static readonly RenderFragment BatteryHelp = @<text>Replace the battery before the sensor stops reporting the temperature.</text>;
+
+	private IReadOnlyList<(string Label, string Value)> Facts =>
+		[.. Model.Facts.Select(fact => (fact.Label, fact.Detail is { Length: > 0 } detail ? $"{fact.Value} ({detail})" : fact.Value))];
+
+	// Pressing the side already pressed must do nothing; this is a flip, not a wall switch.
+	private Task OnEnableSelect(int index) =>
+		index == (Model.IsEnabled ? 0 : 1) ? Task.CompletedTask : Model.ToggleEnabled();
+}

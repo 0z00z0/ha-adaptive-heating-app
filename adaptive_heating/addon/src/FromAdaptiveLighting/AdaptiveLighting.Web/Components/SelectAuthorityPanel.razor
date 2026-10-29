@@ -1,0 +1,154 @@
+@namespace Adaptive.UI
+@* Shared by the period select and the house mode: the order the two controls come in, the unknown-entity
+   notice, and reading an empty live-option list as a Home Assistant that has not answered. *@
+
+<div class="field">
+	<div class="field-head">
+		<span class="field-label"><label for="@EntityInputId">@Copy.Label</label>
+			@if (Copy.LabelHelp is not null || Copy.Note is not null)
+			{
+				<InfoPopover Label="@Copy.Label">
+					@if (Copy.Note is not null)
+					{
+						<span class="info-para">@Copy.Note</span>
+					}
+					@if (Copy.LabelHelp is not null)
+					{
+						<span class="info-para">@Copy.LabelHelp</span>
+					}
+				</InfoPopover>
+			}
+		</span>
+	</div>
+	<div class="field-control">
+		<EntityPicker Id="@EntityInputId"
+					  Value="@Entity"
+					  ValueChanged="@EntityChanged"
+					  Options="@Entities"
+					  Lookup="@Lookup"
+					  NoneLabel="@Copy.NoneLabel"
+					  EmptyNote="@Copy.EmptyNote"
+					  Placeholder="@Copy.Placeholder" />
+	</div>
+</div>
+
+@if (EntityId is not null)
+{
+	<div class="field">
+		<div class="field-head">
+			<span class="field-label"><span id="@AuthorityLabelId">@Copy.AuthorityLabel</span>
+				<InfoPopover Label="@Copy.AuthorityLabel">
+					<span class="info-para">@Copy.AuthorityNote</span>
+					@if (Copy.AuthorityHelp is not null)
+					{
+						<span class="info-para">@Copy.AuthorityHelp</span>
+					}
+				</InfoPopover>
+			</span>
+		</div>
+		@* Renaming a periodselect-* class breaks the house mode too. *@
+		<div class="field-control periodselect-authority" role="radiogroup" aria-labelledby="@AuthorityLabelId">
+			<label class="periodselect-choice">
+				<input type="radio" name="@Group" checked="@HomeAssistant"
+					   @onchange="@(() => SetAuthority(true))" />
+				Home Assistant
+			</label>
+			<label class="periodselect-choice">
+				<input type="radio" name="@Group" checked="@(!HomeAssistant)"
+					   @onchange="@(() => SetAuthority(false))" />
+				Adaptive Heating
+			</label>
+		</div>
+	</div>
+
+	@if (ShowsUnavailable)
+	{
+		<div class="notice bad periodselect-warning info-host">
+			<span class="info-line">
+				<strong><code>@EntityId</code> not found</strong>
+				<InfoPopover Label="Not found" Severity="InfoSeverity.Bad">
+					Home Assistant doesn't know this helper. @Copy.UnavailableNote
+				</InfoPopover>
+			</span>
+		</div>
+	}
+
+	@Body?.Invoke(new State(_liveValues, IsReady, ShowsUnavailable))
+}
+
+@code {
+	/// <summary>What the shared markup has settled before the consumer's own body renders.</summary>
+	public sealed record State(IReadOnlyList<string> LiveValues, bool IsReady, bool ShowsUnavailable);
+
+	/// <summary>Everything the panel says: the labels, the two help popovers and the notes under each control.</summary>
+	[Parameter, EditorRequired]
+	public SelectAuthorityCopy Copy { get; set; } = new();
+
+	/// <summary>The configured entity as stored, untrimmed, so a hand-edited value shows as it is on disk.</summary>
+	[Parameter]
+	public string? Entity { get; set; }
+
+	// The one field this component does not write itself: changing it changes which helper's live options the
+	// body is drawn from, and only the page can re-read those.
+	[Parameter]
+	public EventCallback<string?> EntityChanged { get; set; }
+
+	/// <summary>The <c>input_select</c> entities the picker offers.</summary>
+	[Parameter]
+	public IReadOnlyList<EntityOption> Entities { get; set; } = [];
+
+	/// <summary>What an id is called and whether Home Assistant knows it, handed on to the picker.</summary>
+	[Parameter]
+	public EntityLookup? Lookup { get; set; }
+
+	/// <summary>The radio group's name; two panels sharing one would make a single pair of radios.</summary>
+	[Parameter, EditorRequired]
+	public string Group { get; set; } = "";
+
+	private string EntityInputId => $"{Group}-entity";
+
+	private string AuthorityLabelId => $"{Group}-label";
+
+	/// <summary>Whether Home Assistant currently owns this dropdown.</summary>
+	[Parameter]
+	public bool HomeAssistant { get; set; }
+
+	/// <summary>Raised with the chosen direction; the consumer owns the enum.</summary>
+	[Parameter]
+	public EventCallback<bool> HomeAssistantChanged { get; set; }
+
+	[Parameter]
+	public bool IsAvailable { get; set; }
+
+	/// <summary>Whether Home Assistant is answering, so an empty option list can say which of the two it is.</summary>
+	[Parameter]
+	public bool IsReady { get; set; } = true;
+
+	/// <summary>The helper's live options; empty means Home Assistant has not answered, see <see cref="IsReady"/>.</summary>
+	[Parameter]
+	public IReadOnlyList<string> LiveOptions { get; set; } = [];
+
+	/// <summary>Everything below the switch, rendered only once an entity is picked.</summary>
+	[Parameter]
+	public RenderFragment<State>? Body { get; set; }
+
+	// Cached per parameter set, and safe only because it is a pure function of the LiveOptions parameter.
+	private List<string> _liveValues = [];
+
+	/// <summary>The entity as anything reading Home Assistant asks for it, matching the config accessors.</summary>
+	private string? EntityId => Entity is { Length: > 0 } entity && entity.Trim() is { Length: > 0 } trimmed
+		? trimmed
+		: null;
+
+	// An entity nobody has answered about is not yet a fault: IsReady false means the connection, not the id.
+	private bool ShowsUnavailable => !IsAvailable && IsReady;
+
+	/// <inheritdoc/>
+	protected override void OnParametersSet() => _liveValues = HouseModeSync.Clean(LiveOptions);
+
+	private Task SetAuthority(bool homeAssistant)
+	{
+		HomeAssistant = homeAssistant;
+		return HomeAssistantChanged.InvokeAsync(homeAssistant);
+	}
+}

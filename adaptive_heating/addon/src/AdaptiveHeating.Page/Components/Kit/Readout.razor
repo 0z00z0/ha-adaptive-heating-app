@@ -1,0 +1,31 @@
+@* Something the page only reports: no control and no click, so a reading is never dressed as a setting. *@
+
+<div class="readout">
+	<span class="readout-label">
+		<span>@Label</span>
+		<Info Label="@Label" Severity="@Severity">@Help</Info>
+	</span>
+
+	<span class="readout-value">@Value</span>
+	@ChildContent
+</div>
+
+@code {
+	[Parameter, EditorRequired]
+	public string Label { get; set; } = "";
+
+	/// <summary>The value as it is read, unit and all. Plain text, never markup.</summary>
+	[Parameter, EditorRequired]
+	public string Value { get; set; } = "";
+
+	/// <summary>The help text for the (i); null gives the readout no (i).</summary>
+	[Parameter]
+	public RenderFragment? Help { get; set; }
+
+	[Parameter]
+	public InfoSeverity Severity { get; set; }
+
+	/// <summary>A chip or a mark beside the value, where the state is worth one.</summary>
+	[Parameter]
+	public RenderFragment? ChildContent { get; set; }
+}

@@ -1,0 +1,136 @@
+@namespace Adaptive.UI
+@* Lamplight's "House modes" tab: the same leaf controls and the same three help bodies today's
+   HouseModesSection wires (they are markup, not model state), over Lamplight's own shell. *@
+@using AdaptiveLighting.Lamplight.Components.Kit
+@using AdaptiveLighting.Web.Components
+
+<h1 class="pagetitle info-line">
+	House modes
+	<Info Label="House modes">
+		The house mode lives in a Home Assistant dropdown helper. Pick the helper, then say what each of its
+		options means &mdash; Normal, Sleep, Away, Boost, Guest or one of the arrival kinds. Modes are switched on the <a href="">dashboard</a>.
+	</Info>
+</h1>
+
+<section class="glass">
+	<SelectAuthorityPanel Copy="@Copy"
+						   Entity="@Model.HouseModeEntity"
+						   EntityChanged="@Model.SetHouseModeEntity"
+						   Entities="@Model.InputSelects"
+						   Lookup="@Model.Lookup"
+						   Group="lamplight-housemode-authority"
+						   HomeAssistant="@Model.HouseModeAuthorityIsHomeAssistant"
+						   HomeAssistantChanged="@Model.SetHouseModeAuthority"
+						   IsAvailable="@Model.HouseModeEntityIsAvailable"
+						   IsReady="@Model.HomeAssistantIsAnswering"
+						   LiveOptions="@Model.LiveSelectOptions">
+		<Body Context="state">
+			@if (Model.HelperDiff.Differs)
+			{
+				<p class="hint info-line">
+					<code>@Model.HouseModeEntityId</code> has drifted
+					<Info Label="Helper drifted" Severity="InfoSeverity.Warn">The helper and this list have drifted apart. @Model.HelperDriftText</Info>
+				</p>
+			}
+			else if (Model.HelperDiff.Matches)
+			{
+				<p class="hint"><code>@Model.HouseModeEntityId</code> matches</p>
+			}
+			else
+			{
+				<p class="hint info-line">
+					Can&rsquo;t compare with <code>@Model.HouseModeEntityId</code>
+					<Info Label="Not checked">Home Assistant hasn&rsquo;t said which options the helper has, so this list can&rsquo;t be compared with it.</Info>
+				</p>
+			}
+
+			@if (Model.DormantRules.Any)
+			{
+				<div class="notice warn">
+					<span class="info-line">
+						<strong>Rules paused while Home Assistant decides</strong>
+						<Info Label="Paused rules" Severity="InfoSeverity.Warn">
+							@foreach (string rule in Model.DormantRules.Names)
+							{
+								<span class="info-para">@rule</span>
+							}
+							<span class="info-para">They are kept, and start working again once the house mode is handed back.</span>
+						</Info>
+					</span>
+				</div>
+			}
+		</Body>
+	</SelectAuthorityPanel>
+</section>
+
+@if (Model.ModeLines.Count > 0)
+{
+	<section class="glass">
+		<h2 class="sec-h">What each mode does<small>@Model.HouseModeEntity</small></h2>
+		@foreach (ModeLine line in Model.ModeLines)
+		{
+			ModeLine mode = line;
+
+			<div class="rows one">
+				<Row Label="@mode.Name" Value="@(Model.IsActiveMode(mode) ? "active now" : "")" IsWide="true">
+					<ChildContent><SentenceView Sentences="@mode.Sentences" Edited="@Model.OnModeEdited" Note="@HousePageModel.TokenNote" ShowLegend="false" /></ChildContent>
+				</Row>
+			</div>
+		}
+	</section>
+}
+
+@if (Model.HasHouseModeEntity)
+{
+	<h2 class="sec-h">
+		Mode options
+		<InfoPopover Label="Mode options">
+			<strong>Normal</strong> is everyday heating and the option every reset returns to.
+			<strong>Sleep</strong> holds every room at its night temperature.
+			<strong>Away</strong> and <strong>Planned to arrive</strong> hold every room at its away temperature.
+			<strong>Boost</strong> holds every room at its boost temperature.
+			<strong>On the way</strong> and <strong>Temporarily away</strong> hold every room at its home temperature.
+			<strong>Guest</strong> leaves every room exactly as it is.
+		</InfoPopover>
+	</h2>
+
+	<HouseModeOptions HouseMode="@Model.HouseMode"
+					   LiveOptions="@Model.LiveSelectOptions"
+					   ActiveValue="@Model.ActiveModeValue"
+					   Periods="@Model.Periods"
+					   PresenceSensors="@Model.PresenceEntities"
+					   DateTimes="@Model.DateTimes"
+					   ActivationEntities="@Model.ActivationEntities"
+					   Lookup="@Model.Lookup"
+					   IsReady="@Model.HomeAssistantIsAnswering"
+					   HomeAssistantDecides="@Model.HouseModeIsHomeAssistants"
+					   Changed="@Model.OnHouseModeOptionsChanged" />
+}
+
+@code {
+	[Parameter, EditorRequired]
+	public HousePageModel Model { get; set; } = null!;
+
+	private SelectAuthorityCopy Copy => Model.HouseModePanelCopy with
+	{
+		LabelHelp = HelperHelp,
+		Note = NoHelperNote,
+		AuthorityHelp = DirectionHelp
+	};
+
+	private RenderFragment HelperHelp => @<text>
+		Which dropdown helper holds this house's modes. Its options appear below &mdash; say what each one
+		means. No helper yet? Make one in Home Assistant under <strong>Settings &rarr; Devices &amp; services
+		&rarr; Helpers &rarr; Create helper &rarr; Dropdown</strong>, add options, then pick it here.
+	</text>;
+
+	private RenderFragment NoHelperNote => @<text>
+		Without one the house is always in everyday heating.
+	</text>;
+
+	private RenderFragment DirectionHelp => @<text>
+		<strong>Home Assistant</strong> means the dropdown is the only thing that moves the house: the engine
+		reads it and never writes it back. <strong>Adaptive Heating</strong> means the engine may set the mode
+		itself and keeps the dropdown pointing at the answer.
+	</text>;
+}

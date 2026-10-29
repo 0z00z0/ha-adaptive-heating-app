@@ -1,0 +1,131 @@
+@namespace Adaptive.UI
+@* The text box exists because Kestrel serves before NetDaemon finishes connecting, and because an entity may
+   be named here before it exists in Home Assistant. *@
+
+<div class="picker">
+	@if (_manual || !HasOptions)
+	{
+		<input type="text"
+			   id="@Id"
+			   class="picker-text"
+			   placeholder="@Placeholder"
+			   value="@Value"
+			   @onchange="OnTyped" />
+	}
+	else
+	{
+		<select id="@Id" class="picker-select" @bind:get="Value ?? string.Empty" @bind:set="OnPicked">
+			<option value="">@NoneLabel</option>
+			@foreach (EntityOption option in Options)
+			{
+				<option value="@option.EntityId">@option.Label</option>
+			}
+			@if (Others.Count > 0)
+			{
+				<optgroup label="@OthersLabel">
+					@foreach (EntityOption option in Others)
+					{
+						<option value="@option.EntityId">@option.Label</option>
+					}
+				</optgroup>
+			}
+			@if (IsUnlisted)
+			{
+				@* Never drop a configured value Home Assistant does not know: the REPLACE_ME case has to be
+				   visible to be replaced. *@
+				<option value="@Value">@UnlistedLabel</option>
+			}
+		</select>
+	}
+
+	<button type="button" class="picker-mode" @onclick="ToggleMode" disabled="@(!HasOptions)">
+		@(_manual ? "Pick from list" : "Type an id")
+	</button>
+
+	@if (!HasOptions)
+	{
+		<span class="picker-note">@EmptyNote</span>
+	}
+	else if (IsUnknown)
+	{
+		<span class="picker-note bad">Unknown id — typo?</span>
+	}
+</div>
+
+@code {
+	/// <summary>The id of the text box or list, for a label's for attribute.</summary>
+	[Parameter]
+	public string? Id { get; set; }
+
+	[Parameter]
+	public string? Value { get; set; }
+
+	[Parameter]
+	public EventCallback<string?> ValueChanged { get; set; }
+
+	/// <summary>The entities to offer, already filtered to the domains this field accepts.</summary>
+	[Parameter]
+	public IReadOnlyList<EntityOption> Options { get; set; } = [];
+
+	/// <summary>Everything else the field could use, offered under <see cref="OthersLabel"/> below
+	/// <see cref="Options"/>, which is what the room resolves to as it stands.</summary>
+	[Parameter]
+	public IReadOnlyList<EntityOption> Others { get; set; } = [];
+
+	[Parameter]
+	public string OthersLabel { get; set; } = "Everything else";
+
+	[Parameter]
+	public string NoneLabel { get; set; } = "(none)";
+
+	[Parameter]
+	public string Placeholder { get; set; } = "domain.entity_id";
+
+	/// <summary>What a picker says when it has nothing to offer and the caller did not word it.</summary>
+	public const string DefaultEmptyNote = "Nothing to pick — type an id";
+
+	/// <summary>Why there is nothing to pick, worded by the caller: a Home Assistant that is down and a list
+	/// filtered to an area holding no such entity look the same here.</summary>
+	[Parameter]
+	public string EmptyNote { get; set; } = DefaultEmptyNote;
+
+	/// <summary>What an id is called and whether Home Assistant knows it, so an out-of-list value can read as
+	/// filtered out rather than unknown. Left unset, an id is its own name and is treated as unknown.</summary>
+	[Parameter]
+	public EntityLookup? Lookup { get; set; }
+
+	private bool _manual;
+
+	private bool HasOptions => Options.Count > 0 || Others.Count > 0;
+
+	private bool IsUnlisted =>
+		Value is { Length: > 0 }
+		&& !Options.Concat(Others).Any(option => string.Equals(option.EntityId, Value, StringComparison.Ordinal));
+
+	/// <summary>Whether an out-of-list value is unknown to Home Assistant, not merely filtered out of this domain.</summary>
+	private bool IsUnknown => IsUnlisted && !(Lookup?.Knows(Value!) ?? false);
+
+	private string UnlistedLabel
+	{
+		get
+		{
+			string name = Lookup?.Name(Value!) ?? Value!;
+			return IsUnknown ? $"{name} — not known to Home Assistant" : name;
+		}
+	}
+
+	private Task OnPicked(string picked) => Commit(picked);
+
+	private Task OnTyped(ChangeEventArgs args) => Commit(args.Value as string);
+
+	private void ToggleMode() => _manual = !_manual;
+
+	private Task Commit(string? raw)
+	{
+		// "" normalises to null at the edge: the schema uses null for "not set", and an empty string would be
+		// validated as an entity id Home Assistant does not know.
+		string? value = string.IsNullOrWhiteSpace(raw) ? null : raw.Trim();
+		Value = value;
+		return ValueChanged.InvokeAsync(value);
+	}
+}

@@ -1,0 +1,67 @@
+@page "/activity"
+@implements IDisposable
+@inject IActivityRecord Log
+@inject ILogger<Activity> Logger
+@using AdaptiveLighting.Lamplight.Components.Activity
+@using AdaptiveLighting.Lamplight.Components.Kit
+
+<PageTitle>Activity &mdash; Adaptive Heating</PageTitle>
+
+<h1 class="pagetitle info-line">
+	Activity
+	<Info Label="Activity">
+		What the add-on did in each room and in the house, newest at top. Times come from the machine running adaptive
+		heating, which is not always the one this page is read on.
+	</Info>
+</h1>
+
+<section class="glass">
+	<ActivityFilters RoomOptions="_model.RoomOptions"
+					  Room="@_model.Room"
+					  RoomChanged="_model.SelectRoom"
+					  Chips="_model.Chips"
+					  Toggle="_model.Toggle"
+					  Pending="_model.Pending"
+					  PendingWord="@_model.PendingWord"
+					  ShowNew="_model.ShowNew"
+					  HiddenNote="@_model.HiddenNote"
+					  HiddenWhy="@_model.HiddenWhy"
+					  ShowEverything="_model.ShowEverything" />
+
+	@* Now is read at render time, not page load: a page left open past midnight must not keep heading
+	   yesterday's entries Today. *@
+	@foreach (ActivityDay day in ActivityView.GroupByDay(_model.Rows, DateTimeOffset.Now))
+	{
+		<h2 class="day">@day.Heading</h2>
+		<ol class="acts">
+			@foreach (ActivityRow row in day.Rows)
+			{
+				<ReportRow @key="row.Sequence" Row="row" />
+			}
+		</ol>
+	}
+
+	<p class="act-foot info-line">
+		@_model.FootLine
+		<Info Label="Reports">@_model.FootWhy</Info>
+	</p>
+</section>
+
+@code {
+	private ActivityPageModel _model = default!;
+
+	/// <inheritdoc/>
+	protected override void OnInitialized()
+	{
+		_model = new ActivityPageModel(Log, Logger, work => InvokeAsync(work));
+		_model.Changed += StateHasChanged;
+		_model.Start();
+	}
+
+	/// <inheritdoc/>
+	public void Dispose()
+	{
+		_model.Changed -= StateHasChanged;
+		_model.Dispose();
+	}
+}
