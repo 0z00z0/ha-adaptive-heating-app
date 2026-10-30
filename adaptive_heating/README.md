@@ -21,7 +21,7 @@ Supported boards are `aarch64` and `amd64`. A 32-bit board is not covered.
 
 1. Copy this folder, `adaptive_heating/`, with everything in it, to `/addons/adaptive_heating/` on the box.
 2. Reload the store. **Adaptive Heating** appears in the section for local apps.
-3. Install it, and carry on from step 4 of the integration's README.
+3. Install and start it, and carry on from step 6 of the integration's README.
 
 To update, replace the folder's contents and rebuild the add-on from its own page.
 
